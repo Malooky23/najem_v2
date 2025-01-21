@@ -13,7 +13,7 @@ export default async function DashboardPage() {
     const [customerData] = await db
       .select()
       .from(customer)
-      .where(eq(customer.userId, session.user.id));
+      .where(eq(customer.userId, session.user.id!));
 
     if (customerData) {
       const recentOrders = await db
@@ -31,7 +31,7 @@ export default async function DashboardPage() {
     const [employeeData] = await db
       .select()
       .from(employee)
-      .where(eq(employee.userId, session.user.id));
+      .where(eq(employee.userId, session.user.id!));
 
     if (employeeData) {
       const pendingOrders = await db
@@ -56,7 +56,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {dashboardData?.type === "customer" && (
+      {dashboardData?.type === "customer" && dashboardData?.orders && (
         <div className="space-y-6">
           <div className="bg-white shadow rounded-lg p-6">
             <h2 className="text-lg font-medium mb-4">Recent Orders</h2>
@@ -85,7 +85,7 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {dashboardData?.type === "employee" && (
+{dashboardData?.type === "employee" && dashboardData?.pendingOrders && (
         <div className="space-y-6">
           <div className="bg-white shadow rounded-lg p-6">
             <h2 className="text-lg font-medium mb-4">Pending Orders</h2>
