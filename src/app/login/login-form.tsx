@@ -33,6 +33,7 @@ export function LoginForm() {
       router.push("/dashboard");
       router.refresh();
     } catch (error) {
+      console.error(error);
       setError("An error occurred. Please try again.");
     } finally {
       setLoading(false);
