@@ -13,11 +13,10 @@ export const createItemSchema = z.object({
   itemType: z.enum(itemTypes),
   itemModel: z.string().max(100).optional(),
   itemBrand: z.string().max(100).optional(),
-  weightGrams: z.number().optional(),
+  weightGrams: z.number().int("Weight must be a whole number").min(0, "Weight must be positive").nullable().optional(),
   notes: z.string().max(1000).optional(),
   dimensions: itemDimensionSchema.optional(),
   itemBarcode: z.string().max(100).optional(),
-  createdBy: z.string().uuid("Invalid created by USER ID"),
   ownerId: z.string().uuid("Invalid owner ID"),
   ownerType: z.enum(["COMPANY", "CUSTOMER"]),
 });
@@ -29,13 +28,7 @@ export const updateItemSchema = z.object({
   itemModel: z.string().nullable().optional(),
   itemBarcode: z.string().nullable().optional(),
   dimensions: z.any().optional(),
-  weightGrams: z.union([
-    z.number(),
-    z.string().transform((val) => {
-      const num = parseFloat(val);
-      return isNaN(num) ? undefined : num;
-    }),
-  ]).nullable().optional(),
+  weightGrams: z.number().int("Weight must be a whole number").min(0, "Weight must be positive").nullable().optional(),
   notes: z.string().nullable().optional(),
   ownerId: z.string().nullable().optional(),
   ownerType: z.string().nullable().optional(),

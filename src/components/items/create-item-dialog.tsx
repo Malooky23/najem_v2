@@ -25,10 +25,10 @@ const FORM_FIELDS = {
     { name: "itemModel", label: "Model" },
   ],
   dimensions: [
-    { name: "itemDimension.length", label: "Length (cm)", type: "number", min: 0 },
-    { name: "itemDimension.width", label: "Width (cm)", type: "number", min: 0 },
-    { name: "itemDimension.height", label: "Height (cm)", type: "number", min: 0 },
-    { name: "weightGrams", label: "Weight (g)", type: "number", min: 0 },
+    { name: "itemDimension.length", label: "Length (cm)", type: "number", min: 0, step: 1 },
+    { name: "itemDimension.width", label: "Width (cm)", type: "number", min: 0, step: 1 },
+    { name: "itemDimension.height", label: "Height (cm)", type: "number", min: 0, step: 1 },
+    { name: "weightGrams", label: "Weight (g)", type: "number", min: 0, step: 1 },
   ],
 } as const;
 
@@ -36,9 +36,6 @@ export function CreateItemDialog({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
   const { data: session } = useSession();
-
-  console.log('Session:', session);
-  console.log('User ID:', session?.user?.id);
 
   const form = useForm<CreateItemInput>({
     resolver: zodResolver(createItemSchema),
@@ -50,18 +47,9 @@ export function CreateItemDialog({ children }: { children: React.ReactNode }) {
         height: undefined,
       },
       weightGrams: undefined,
-      createdBy: "", // Will be set by useEffect
     },
   });
 
-  // Update createdBy when session is available
-  useEffect(() => {
-    if (session?.user?.id) {
-      form.setValue('createdBy', session.user.id);
-    }
-  }, [session, form]);
-
-  
   const { data: itemOwners = [] } = useQuery({
       queryKey: ["itemOwners"],
       queryFn: async () => {
@@ -97,7 +85,7 @@ export function CreateItemDialog({ children }: { children: React.ReactNode }) {
               .filter(([_, value]) => value !== undefined)
           ) 
           : undefined,
-        weightGrams: data.weightGrams || undefined,
+        weightGrams: data.weightGrams ? Math.round(data.weightGrams) : undefined,
       };
 
       console.log('Cleaned data:', cleanedData);
@@ -107,18 +95,22 @@ export function CreateItemDialog({ children }: { children: React.ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(cleanedData),
       });
-      if (!response.ok) throw new Error("Failed to create item");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create item');
+      }
       return response.json();
     },
     onSuccess: () => {
-      console.log('Mutation succeeded');
+      queryClient.invalidateQueries({ queryKey: ["items"] });
+      toast({
+        title: "Success",
+        description: "Item created successfully",
+      });
       setOpen(false);
       form.reset();
-      queryClient.invalidateQueries({ queryKey: ["items"] });
-      toast({ title: "Success", description: "Item created successfully" });
     },
-    onError: (error) => {
-      console.error('Mutation error:', error);
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -138,7 +130,7 @@ export function CreateItemDialog({ children }: { children: React.ReactNode }) {
 
   // Add this to debug form validation
   const handleSubmit = form.handleSubmit(onSubmit);
-  console.log('Form state:', {
+  console.log('Form state111111111:', {
     isValid: form.formState.isValid,
     errors: form.formState.errors,
     values: form.getValues(),
@@ -251,4 +243,3 @@ export function CreateItemDialog({ children }: { children: React.ReactNode }) {
     </Dialog>
   );
 } 
-

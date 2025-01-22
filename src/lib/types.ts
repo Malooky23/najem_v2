@@ -16,7 +16,7 @@ export interface Item {
   ownerId: string | null;
   ownerName: string | null;
   ownerType: string | null;
-  createdBy?: string;
+  createdBy?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -48,7 +48,7 @@ export interface CreateItemInput {
   itemType: ItemType;
   itemModel?: string;
   itemBrand?: string;
-  weightGrams?: number;
+  weightGrams?: number | null;
   notes?: string;
   itemDimension?: {
     length?: number;
@@ -58,8 +58,9 @@ export interface CreateItemInput {
   itemBarcode?: string;
   ownerId: string;
   ownerType: "COMPANY" | "CUSTOMER";
-  createdBy: string;
-  createdAt: Date;
-  updatedBy: string;
-  updatedAt: Date;
 }
+
+  // createdBy: string;
+  // createdAt: Date;
+  // updatedBy: string;
+  // updatedAt: Date;

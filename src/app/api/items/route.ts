@@ -3,67 +3,62 @@ import { item, itemOwners, users, type Item } from "@/lib/db/schema";
 import { createItemSchema } from "@/lib/validations/item";
 import { auth } from "@/lib/auth";
 import { eq, asc } from "drizzle-orm";
+import { ZodError } from "zod"; // Ensure ZodError is imported
 
 export async function POST(req: Request) {
   try {
     const session = await auth();
     if (!session) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
+      return Response.json({ error: "You must be logged in to create items" }, { status: 401 });
     }
 
     const json = await req.json();
     const body = createItemSchema.parse(json);
 
     const newItem = await db.transaction(async (tx) => {
-      const insertValues: Item = {
-        itemName: body.itemName,
-        itemType: body.itemType,
-        itemModel: body.itemModel ?? null,
-        itemBrand: body.itemBrand ?? null,
-        weightGrams: body.weightGrams!.toString(), // Convert to string
-        notes: body.notes ?? null,
-        dimensions: body.dimensions ?? null,
-        itemBarcode: body.itemBarcode ?? null,
-        createdBy: session.user.id!,
-        createdAt: undefined!,
-        updatedAt: undefined!,
-        itemId: undefined!,
-        itemNumber: undefined!
-      };
-
       const [createdItem] = await tx.insert(item)
-        .values(insertValues)
+        .values({
+          itemName: body.itemName,
+          itemType: body.itemType,
+          itemModel: body.itemModel ?? null,
+          itemBrand: body.itemBrand ?? null,
+          weightGrams: body.weightGrams ? Math.floor(Number(body.weightGrams)) : null,
+          notes: body.notes ?? null,
+          dimensions: body.dimensions ?? null,
+          itemBarcode: body.itemBarcode ?? null,
+          createdBy: session.user.id!,
+        })
         .returning();
 
-      // const [createdItem] = await tx.insert(item).values({
-      //   itemName: body.itemName,
-      //   itemType: body.itemType,
-      //   itemModel: body.itemModel || null,
-      //   itemBrand: body.itemBrand || null,
-      //   weightGrams: body.weightGrams || null,
-      //   notes: body.notes || null,
-      //   dimensions: body.dimensions || null,
-      //   itemBarcode: body.itemBarcode || null,
-      //   createdBy: session.user.id,
-        
-      // }).returning();
-
-      await tx.insert(itemOwners).values({
-        itemId: createdItem.itemId,
-        ownerId: body.ownerId,
-        ownerType: body.ownerType,
-      });
+      if (body.ownerId && body.ownerType) {
+        await tx.insert(itemOwners).values({
+          itemId: createdItem.itemId,
+          ownerId: body.ownerId,
+          ownerType: body.ownerType,
+        });
+      }
 
       return createdItem;
     });
 
     return Response.json(newItem);
-  } catch (error) {
-    console.error('Create item error:', error);
-    return Response.json(
-      { error: error instanceof Error ? error.message : "Failed to create item" }, 
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    interface CustomError extends Error {
+      code?: string | number; 
+    }
+    // console.error('Error creating item:', error);
+    if (error instanceof ZodError) { 
+      console.error('Zod error:', error.errors);
+      return Response.json({ error: 'Invalid item data: ' + error.errors[0].message }, { status: 400 });
+    }
+    if (error instanceof Error){
+      const customError = error as CustomError; 
+      if (customError.code === '23505') { // Unique constraint violation
+        console.error('XOLE:', customError.code);
+        return Response.json({ error: 'An item with this barcode already exists' }, { status: 400 });
+      }
+    }
+    return Response.json({ error: 'Failed to create item. Please try again.' }, { status: 500 });
   }
 }
 
@@ -93,10 +88,16 @@ export async function GET() {
       .orderBy(asc(item.itemNumber));
     
     return Response.json(items);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Get items error:', error);
+    if (error instanceof Error) {
+      return Response.json(
+        { error: "Failed to fetch items" },
+        { status: 500 }
+      );
+    }
     return Response.json(
-      { error: "Failed to fetch items" },
+      { error: "An unknown error occurred" },
       { status: 500 }
     );
   }

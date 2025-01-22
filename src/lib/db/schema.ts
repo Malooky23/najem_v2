@@ -145,7 +145,7 @@ export const item = pgTable("item", {
   itemModel: varchar("item_model", {length: 100}),
   itemBarcode: varchar("item_barcode", {length: 100}),
   dimensions: jsonb(),
-  weightGrams: numeric("weight_grams", {precision: 10, scale: 2}),
+  weightGrams: integer("weight_grams"),
   notes: text(),
   createdBy: uuid("created_by").notNull(),
   createdAt: timestamp("created_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
@@ -442,4 +442,3 @@ export const itemOwners = pgTable("item_owners", {
 export type User = InferSelectModel<typeof users>;
 export type Session = InferSelectModel<typeof sessionTable>;
 export type Item = InferSelectModel<typeof item>;
-

@@ -77,7 +77,7 @@ export async function PUT(
           itemModel: body.itemModel,
           itemBarcode: body.itemBarcode,
           dimensions: body.dimensions,
-          weightGrams: body.weightGrams?.toString() || null,
+          weightGrams: body.weightGrams ? Math.floor(Number(body.weightGrams)) : null,
           notes: body.notes,
         })
         .where(eq(item.itemId, itemId))

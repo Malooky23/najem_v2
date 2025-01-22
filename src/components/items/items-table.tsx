@@ -82,6 +82,8 @@ export function ItemsTable() {
     },
   });
 
+
+
   const queryClient = useQueryClient();
 
   const table = useReactTable({
@@ -324,3 +326,4 @@ export function ItemsTable() {
     </div>
   );
 }
+
