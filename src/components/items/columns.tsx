@@ -14,8 +14,7 @@ type ColumnConfig = {
   cellType?: 'text' | 'type' | 'owner';
 };
 
-const createHeader = (title: string, column: any, sortable: boolean = false) => {
-  if (!sortable) return title;
+const SortButton = ({ title, column }: { title: string; column: any }) => {
   return (
     <Button
       variant="ghost"
@@ -27,20 +26,29 @@ const createHeader = (title: string, column: any, sortable: boolean = false) => 
     </Button>
   );
 };
+SortButton.displayName = "SortButton";
 
-const createCell = (key: string, cellType: string = 'text') => {
+const createHeader = (title: string, column: any, sortable: boolean = false) => {
+  if (!sortable) return title;
+  return <SortButton title={title} column={column} />;
+};
+
+const ItemCell = ({ row, columnKey, cellType }: { row: any; columnKey: string; cellType: string }) => {
   switch (cellType) {
     case 'type':
-      return ({ row }: any) => <TypeCell type={row.getValue(key)} />;
+      return <TypeCell type={row.getValue(columnKey)} />;
     case 'owner':
-      return ({ row }: any) => {
-        const ownerName = row.getValue(key);
-        const ownerType = row.original.ownerType;
-        return <TextCell value={ownerName ? `${ownerName} (${ownerType})` : "No owner"} />;
-      };
+      const ownerName = row.getValue(columnKey);
+      const ownerType = row.original.ownerType;
+      return <TextCell value={ownerName ? `${ownerName} (${ownerType})` : "No owner"} />;
     default:
-      return ({ row }: any) => <TextCell value={row.getValue(key)} />;
+      return <TextCell value={row.getValue(columnKey)} />;
   }
+};
+ItemCell.displayName = "ItemCell";
+
+const createCell = (key: string, cellType: string = 'text') => {
+  return ({ row }: any) => <ItemCell row={row} columnKey={key} cellType={cellType} />;
 };
 
 const columnConfigs: ColumnConfig[] = [
