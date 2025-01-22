@@ -2,6 +2,8 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { orders, customer, employee } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -85,7 +87,7 @@ export default async function DashboardPage() {
         </div>
       )}
 
-{dashboardData?.type === "employee" && dashboardData?.pendingOrders && (
+      {dashboardData?.type === "employee" && dashboardData?.pendingOrders && (
         <div className="space-y-6">
           <div className="bg-white shadow rounded-lg p-6">
             <h2 className="text-lg font-medium mb-4">Pending Orders</h2>
@@ -113,6 +115,23 @@ export default async function DashboardPage() {
           </div>
         </div>
       )}
+
+      <div className="flex items-center justify-center min-h-[20vh]">
+        <Link
+          href="/items"
+          className="group flex flex-col items-center gap-4 p-8 rounded-lg border bg-card text-card-foreground shadow-sm hover:shadow-md transition-all hover:-translate-y-1"
+        >
+          <div className="rounded-full bg-primary/10 p-6">
+            <ArrowRight className="h-12 w-12 text-primary group-hover:translate-x-1 transition-transform" />
+          </div>
+          <div className="text-center">
+            <h2 className="text-2xl font-semibold tracking-tight">Check Out Our Items Page</h2>
+            <p className="text-muted-foreground mt-2">
+              Create, manage, and track your items with our new item management system
+            </p>
+          </div>
+        </Link>
+      </div>
     </div>
   );
 }

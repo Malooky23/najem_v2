@@ -6,7 +6,7 @@ import { CollapseButton } from "./collapse-button";
 import { cn } from "@/lib/utils";
 
 export function Sidebar() {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   return (
     <aside 

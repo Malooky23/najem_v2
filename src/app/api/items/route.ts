@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { item, itemOwners, type Item } from "@/lib/db/schema";
+import { item, itemOwners, users, type Item } from "@/lib/db/schema";
 import { createItemSchema } from "@/lib/validations/item";
 import { auth } from "@/lib/auth";
 import { eq, asc } from "drizzle-orm";
@@ -85,9 +85,11 @@ export async function GET() {
         createdAt: item.createdAt,
         ownerId: itemOwners.ownerId,
         ownerType: itemOwners.ownerType,
+        ownerUsername: users.username,
       })
       .from(item)
       .leftJoin(itemOwners, eq(item.itemId, itemOwners.itemId))
+      .leftJoin(users, eq(itemOwners.ownerId, users.userId))
       .orderBy(asc(item.itemNumber));
     
     return Response.json(items);

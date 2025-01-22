@@ -173,7 +173,7 @@ export function ItemDetails({ item, onSave, onDelete, onClose }: ItemDetailsProp
               <Label className="text-xs text-muted-foreground">Type</Label>
               {isEditing ? (
                 <Select
-                  value={editedItem.itemType}
+                  value={editedItem.itemType ?? undefined}
                   onValueChange={(value) => setEditedItem({ ...editedItem, itemType: value })}
                 >
                   <SelectTrigger className="h-8 text-xs">

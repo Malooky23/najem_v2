@@ -31,14 +31,18 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { columns } from "./columns";
 import { Item } from "@/lib/types";
 import { ItemDetails } from "./item-details";
 import { ChevronRightIcon, ChevronLeftIcon } from "lucide-react";
-
-
-
-
+import { CreateItemDialog } from "./create-item-dialog";
 
 async function getItems() {
   const response = await fetch("/api/items");
@@ -58,6 +62,10 @@ export function ItemsTable() {
   const [globalFilter, setGlobalFilter] = useState("");
   const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(false);
   const [updatedItemId, setUpdatedItemId] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 5,
+  });
 
   const {
     data: items = [],
@@ -82,13 +90,17 @@ export function ItemsTable() {
     state: {
       sorting,
       globalFilter,
+      pagination,
     },
     onSortingChange: setSorting,
+    onPaginationChange: setPagination,
     getSortedRowModel: getSortedRowModel(),
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     onGlobalFilterChange: setGlobalFilter,
     manualSorting: true,
+    pageCount: Math.ceil(items.length / pagination.pageSize),
   });
 
   const handleSaveItem = async (updatedItem: Item) => {
@@ -119,7 +131,7 @@ export function ItemsTable() {
       setTimeout(() => setUpdatedItemId(null), 1000);
 
       // Refetch items while maintaining sort
-      queryClient.invalidateQueries(["items"]);
+      queryClient.invalidateQueries({ queryKey: ["items"] });
     } catch (error) {
       console.error("Update error:", error);
     }
@@ -136,7 +148,7 @@ export function ItemsTable() {
       }
 
       // Refetch items
-      queryClient.invalidateQueries(["items"]);
+      queryClient.invalidateQueries({ queryKey: ["items"] });
     } catch (error) {
       console.error("Delete error:", error);
     }
@@ -160,25 +172,19 @@ export function ItemsTable() {
 
   return (
     <div className="h-full flex flex-col ">
-      {/* <div className="flex-none mb-4 flex items-center  pb-4">
-      <h2 className="text-3xl font-bold tracking-tight">Items </h2>
-
-        <Input
-          placeholder="Filter items..."
-          value={globalFilter ?? ""}
-          onChange={(event) => setGlobalFilter(event.target.value)}
-          className="max-w-sm"
-        />
-      </div> */}
-      <div className="flex-none mb-4 flex items-center pb-4">
-        <h2 className="text-3xl font-bold tracking-tight mr-4">Items</h2>{" "}
-        {/* Added margin-right to h2 */}
-        <Input
-          placeholder="Filter items..."
-          value={globalFilter ?? ""}
-          onChange={(event) => setGlobalFilter(event.target.value)}
-          className="max-w-sm"
-        />
+      <div className="flex-none mb-4 space-y-4">
+        <div className="flex items-center gap-4">
+          <h2 className="text-3xl font-bold tracking-tight min-w-[100px]">Items</h2>
+          <Input
+            placeholder="Filter items..."
+            value={globalFilter ?? ""}
+            onChange={(event) => setGlobalFilter(event.target.value)}
+            className="flex-1 max-w-2xl"
+          />
+          <CreateItemDialog>
+            <Button>Create Item</Button>
+          </CreateItemDialog>
+        </div>
       </div>
 
       <div className="flex-1 min-h-0 flex">
@@ -259,35 +265,60 @@ export function ItemsTable() {
 
       <div className="flex-none mt-4">
         <div className="flex items-center justify-between">
-          <div className="flex-1 text-sm text-muted-foreground">
-            {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} row(s) selected.
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              Previous
-            </Button>
-            <div className="flex items-center gap-1">
-              <p className="text-sm font-medium">Page</p>
-              <span className="text-sm font-medium">
-                {table.getState().pagination.pageIndex + 1} of{" "}
-                {table.getPageCount()}
-              </span>
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+            <div>
+              {table.getFilteredSelectedRowModel().rows.length} of{" "}
+              {table.getFilteredRowModel().rows.length} row(s) selected.
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              Next
-            </Button>
+            <div className="flex items-center space-x-1">
+              <span>Show</span>
+              <Select
+                value={pagination.pageSize.toString()}
+                onValueChange={(value) => {
+                  table.setPageSize(Number(value));
+                }}
+              >
+                <SelectTrigger className="h-8 w-[70px]">
+                  <SelectValue placeholder={pagination.pageSize} />
+                </SelectTrigger>
+                <SelectContent side="top">
+                  {[5, 10, 20, 30, 40, 50].map((pageSize) => (
+                    <SelectItem key={pageSize} value={pageSize.toString()}>
+                      {pageSize}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span>per page</span>
+            </div>
           </div>
+          {table.getPageCount() > 1 && (
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+              >
+                Previous
+              </Button>
+              <div className="flex items-center gap-1">
+                <p className="text-sm font-medium">Page</p>
+                <span className="text-sm font-medium">
+                  {table.getState().pagination.pageIndex + 1} of{" "}
+                  {table.getPageCount()}
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+              >
+                Next
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>

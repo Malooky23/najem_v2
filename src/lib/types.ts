@@ -5,8 +5,20 @@ export interface Item {
   itemType: string | null;
   itemBrand: string | null;
   itemModel: string | null;
+  itemBarcode: string | null;
+  dimensions: {
+    length?: number;
+    width?: number;
+    height?: number;
+  } | null;
+  weightGrams: number | null;
+  notes: string | null;
+  ownerId: string | null;
   ownerName: string | null;
   ownerType: string | null;
+  createdBy?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 export const itemTypes = [
     "CARTON",

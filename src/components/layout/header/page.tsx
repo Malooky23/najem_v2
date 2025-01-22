@@ -15,15 +15,13 @@ export async function Header() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 h-12 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="h-full flex items-center px-6">
-        <NavigationMenu className="grid grid-cols-3 items-center">
+        <NavigationMenu className="w-full grid grid-cols-3 items-center">
           <div className="justify-self-start">
             <Logo />
           </div>
-          {session?.user && (
-            <div className="justify-self-center">
-              <NavigationLinks userType={userType} isAdmin={isAdmin} />
-            </div>
-          )}
+          <div className="justify-self-center">
+            {session?.user && <NavigationLinks userType={userType} isAdmin={isAdmin} />}
+          </div>
           <div className="justify-self-end">
             <UserMenu session={session} />
           </div>

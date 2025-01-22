@@ -23,8 +23,13 @@ export const {
 
           const userWithPasswordCheck = await db
             .select({
-              ...users,
-              isPasswordValid: sql<boolean>`(crypt(${credentials.password}, ${users.passwordHash}) = ${users.passwordHash})`,
+              userId: users.userId,
+              email: users.email,
+              passwordHash: users.passwordHash,
+              username: users.username,
+              isAdmin: users.isAdmin,
+              userType: users.userType,
+              isPasswordValid: sql<boolean>`crypt(${credentials.password}, ${users.passwordHash}) = ${users.passwordHash}`,
             })
             .from(users)
             .where(eq(users.email, credentials.email.toString()))
@@ -45,7 +50,7 @@ export const {
           const userResult = {
             id: user.userId.toString(),
             email: user.email,
-            name: user.username,
+            username: user.username,
             userType: user.userType,
             isAdmin: user.isAdmin,
           } as User;

@@ -48,16 +48,21 @@ const ItemCell = ({ row, columnKey, cellType }: { row: any; columnKey: string; c
 ItemCell.displayName = "ItemCell";
 
 const createCell = (key: string, cellType: string = 'text') => {
-  return ({ row }: any) => <ItemCell row={row} columnKey={key} cellType={cellType} />;
+  const CellRenderer = ({ row }: any) => <ItemCell row={row} columnKey={key} cellType={cellType} />;
+  CellRenderer.displayName = `CellRenderer_${key}`;
+  return CellRenderer;
 };
 
 const columnConfigs: ColumnConfig[] = [
   { key: "itemNumber", header: "ID", sortable: true },
   { key: "itemName", header: "Name", sortable: true },
   { key: "itemType", header: "Type", cellType: 'type', sortable: true },
-  { key: "itemBrand", header: "Brand", sortable: true },
+  { key: "itemBrand", header: "Brand" },
   { key: "itemModel", header: "Model" },
-  { key: "ownerName", header: "Owner", sortable: true, cellType: 'owner' },
+  { key: "itemBarcode", header: "Barcode" },
+  { key: "ownerUsername", header: "Owner", sortable: true },
+  { key: "ownerType", header: "Owner Type", cellType: 'type' },
+  // { key: "createdAt", header: "Created At", sortable: true },
 ];
 
 export const columns: ColumnDef<Item>[] = columnConfigs.map(config => ({
