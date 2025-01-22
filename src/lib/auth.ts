@@ -16,41 +16,46 @@ export const {
   providers: [
     CredentialsProvider({
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+        try {
+          if (!credentials?.email || !credentials?.password) {
+            return null;
+          }
+
+          const userWithPasswordCheck = await db
+            .select({
+              ...users,
+              isPasswordValid: sql<boolean>`(crypt(${credentials.password}, ${users.passwordHash}) = ${users.passwordHash})`,
+            })
+            .from(users)
+            .where(eq(users.email, credentials.email.toString()))
+            .limit(1);
+
+          if (userWithPasswordCheck.length === 0) {
+            console.log('User not found');
+            return null;
+          }
+
+          const user = userWithPasswordCheck[0];
+          
+          if (!user.isPasswordValid) {
+            console.log('Invalid password');
+            return null;
+          }
+
+          const userResult = {
+            id: user.userId.toString(),
+            email: user.email,
+            name: user.username,
+            userType: user.userType,
+            isAdmin: user.isAdmin,
+          } as User;
+
+          console.log('Login successful for user:', userResult.email);
+          return userResult;
+        } catch (error) {
+          console.error('Auth error:', error);
           return null;
         }
-
-        const user = await db
-          .select()
-          .from(users)
-          .where(eq(users.email, credentials.email.toString()))
-          .limit(1);
-
-        if (user.length === 0) return null;
-        console.log('User found:', user);
-
-        const isPasswordValid = await db
-          .select({
-            isMatch: sql<boolean>`(SELECT (crypt(${credentials.password}, ${user[0].passwordHash}) = ${user[0].passwordHash}))`,
-          })
-          .from(users)
-          .where(eq(users.email, credentials.email.toString()))
-          .limit(1);
-
-        console.log('Password validation result:', isPasswordValid);
-        
-        if (!isPasswordValid[0].isMatch) return null;
-
-        const userResult = {
-          id: user[0].userId.toString(),
-          email: user[0].email,
-          name: user[0].username,
-          userType: user[0].userType,
-          isAdmin: user[0].isAdmin,
-        } as User;
-
-        console.log('Returning user:', userResult);
-        return userResult;
       },
     }),
   ],

@@ -1,0 +1,295 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import {
+  ColumnFiltersState,
+  SortingState,
+  VisibilityState,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
+
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { columns } from "./columns";
+import { Item } from "@/lib/types";
+import { ItemDetails } from "./item-details";
+import { ChevronRightIcon, ChevronLeftIcon } from "lucide-react";
+
+
+
+
+
+async function getItems() {
+  const response = await fetch("/api/items");
+  if (!response.ok) {
+    throw new Error("Failed to fetch items");
+  }
+  return response.json();
+}
+
+export function ItemsTable() {
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "itemNumber", desc: false },
+  ]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(false);
+  const [updatedItemId, setUpdatedItemId] = useState<string | null>(null);
+
+  const {
+    data: items = [],
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ["items"],
+    queryFn: async () => {
+      const response = await fetch("/api/items");
+      if (!response.ok) throw new Error("Network response was not ok");
+      const data = await response.json();
+      console.log("Fetched data:", data);
+      return data;
+    },
+  });
+
+  const queryClient = useQueryClient();
+
+  const table = useReactTable({
+    data: items,
+    columns,
+    state: {
+      sorting,
+      globalFilter,
+    },
+    onSortingChange: setSorting,
+    getSortedRowModel: getSortedRowModel(),
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onGlobalFilterChange: setGlobalFilter,
+    manualSorting: true,
+  });
+
+  const handleSaveItem = async (updatedItem: Item) => {
+    try {
+      const response = await fetch(`/api/items/${updatedItem.itemId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          itemName: updatedItem.itemName,
+          itemType: updatedItem.itemType,
+          itemBrand: updatedItem.itemBrand || null,
+          itemModel: updatedItem.itemModel || null,
+          itemBarcode: updatedItem.itemBarcode || null,
+          dimensions: updatedItem.dimensions,
+          weightGrams: updatedItem.weightGrams || null,
+          notes: updatedItem.notes || null,
+          ownerId: updatedItem.ownerId || null,
+          ownerType: updatedItem.ownerType || null,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update item");
+      }
+
+      // Show update animation
+      setUpdatedItemId(updatedItem.itemId);
+      setTimeout(() => setUpdatedItemId(null), 1000);
+
+      // Refetch items while maintaining sort
+      queryClient.invalidateQueries(["items"]);
+    } catch (error) {
+      console.error("Update error:", error);
+    }
+  };
+
+  const handleDeleteItem = async (item: Item) => {
+    try {
+      const response = await fetch(`/api/items/${item.itemId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete item");
+      }
+
+      // Refetch items
+      queryClient.invalidateQueries(["items"]);
+    } catch (error) {
+      console.error("Delete error:", error);
+    }
+  };
+
+  const handleRowClick = (item: Item) => {
+    setSelectedItem(item);
+    setIsDetailsPanelOpen(true);
+  };
+
+  if (isLoading)
+    return (
+      <div className="flex items-center justify-center p-8">Loading...</div>
+    );
+  if (isError)
+    return (
+      <div className="flex items-center justify-center p-8 text-red-500">
+        Error loading items
+      </div>
+    );
+
+  return (
+    <div className="h-full flex flex-col ">
+      {/* <div className="flex-none mb-4 flex items-center  pb-4">
+      <h2 className="text-3xl font-bold tracking-tight">Items </h2>
+
+        <Input
+          placeholder="Filter items..."
+          value={globalFilter ?? ""}
+          onChange={(event) => setGlobalFilter(event.target.value)}
+          className="max-w-sm"
+        />
+      </div> */}
+      <div className="flex-none mb-4 flex items-center pb-4">
+        <h2 className="text-3xl font-bold tracking-tight mr-4">Items</h2>{" "}
+        {/* Added margin-right to h2 */}
+        <Input
+          placeholder="Filter items..."
+          value={globalFilter ?? ""}
+          onChange={(event) => setGlobalFilter(event.target.value)}
+          className="max-w-sm"
+        />
+      </div>
+
+      <div className="flex-1 min-h-0 flex">
+        <div className="flex-1 overflow-auto border rounded-md">
+          <Table>
+            <TableHeader className="sticky top-0 bg-background z-10">
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow
+                  key={headerGroup.id}
+                  className="bg-muted/50 hover:bg-muted/50"
+                >
+                  {headerGroup.headers.map((header) => (
+                    <TableHead
+                      key={header.id}
+                      className="h-10 px-2 text-xs font-medium"
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                    className={cn(
+                      "group hover:bg-slate-600 transition-all duration-200 cursor-pointer border-b",
+                      updatedItemId === row.original.itemId &&
+                        "animate-highlight"
+                    )}
+                    onClick={() => handleRowClick(row.original)}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className="p-2 text-sm">
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center text-muted-foreground"
+                  >
+                    No items found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {isDetailsPanelOpen && (
+          <div className="w-[400px] border-l relative">
+            {selectedItem && (
+              <ItemDetails
+                item={selectedItem}
+                onClose={() => setIsDetailsPanelOpen(false)}
+                onSave={handleSaveItem}
+                onDelete={handleDeleteItem}
+              />
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="flex-none mt-4">
+        <div className="flex items-center justify-between">
+          <div className="flex-1 text-sm text-muted-foreground">
+            {table.getFilteredSelectedRowModel().rows.length} of{" "}
+            {table.getFilteredRowModel().rows.length} row(s) selected.
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              Previous
+            </Button>
+            <div className="flex items-center gap-1">
+              <p className="text-sm font-medium">Page</p>
+              <span className="text-sm font-medium">
+                {table.getState().pagination.pageIndex + 1} of{" "}
+                {table.getPageCount()}
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

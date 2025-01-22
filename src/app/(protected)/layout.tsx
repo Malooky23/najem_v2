@@ -14,9 +14,15 @@ export default async function ProtectedLayout({
   }
 
   return (
-    <div className="flex-1 flex">
+    <div className="flex h-full">
       <Sidebar />
-      <main className="flex-1 p-6">{children}</main>
+      <main className="flex-1 relative bg-background">
+        <div className="absolute inset-0 overflow-auto">
+          <div className="h-full p-4">
+            {children}
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
