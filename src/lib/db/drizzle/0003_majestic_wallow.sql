@@ -1,0 +1,1 @@
+ALTER TABLE "company" ALTER COLUMN "comp_name" SET DATA TYPE varchar;

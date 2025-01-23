@@ -28,12 +28,10 @@ export const vendorType = pgEnum("vendor_type", ['FORKLIFT', 'LABOUR', 'OTHER'])
 
 export const address = pgTable("address", {
   addressId: uuid("address_id").defaultRandom().primaryKey().notNull(),
-  ownerId: uuid("owner_id").notNull(),
-  ownerType: userType("owner_type").notNull(),
-  address1: varchar("address_1", {length: 255}).notNull(),
-  address2: varchar("address_2", {length: 255}),
-  city: varchar({length: 100}).notNull(),
-  country: varchar({length: 2}).notNull(),
+  address1: text("address_1").notNull(),
+  address2: text("address_2"),
+  city: text().notNull(),
+  country: text().notNull(),
   postalCode: varchar("postal_code", {length: 20}),
   createdAt: timestamp("created_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
   updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
@@ -41,22 +39,17 @@ export const address = pgTable("address", {
 
 export const company = pgTable("company", {
   compId: uuid("comp_id").defaultRandom().primaryKey().notNull(),
-  compName: varchar("comp_name", {length: 100}).notNull(),
+  compName: text("comp_name").notNull(),
   compNumber: serial("comp_number").notNull(),
-  email: varchar({length: 100}),
+  email: text(),
   trn: varchar({length: 15}),
-  mobile: varchar({length: 16}),
-  landline: varchar({length: 16}),
-  addressId: uuid("address_id"),
+  mobile: text(),
+  landline: text(),
   notes: text(),
+  addressId: uuid("address_id"),
   createdAt: timestamp("created_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
   updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
 }, (table) => [
-  foreignKey({
-      columns: [table.addressId],
-      foreignColumns: [address.addressId],
-      name: "company_address_id_fkey"
-  }).onDelete("set null"),
   unique("company_comp_number_key").on(table.compNumber),
   unique("company_email_key").on(table.email),
   unique("company_trn_key").on(table.trn),
