@@ -64,6 +64,14 @@ export async function POST(req: Request) {
 
 export async function GET() {
   try {
+    const session = await auth();
+    if (!session) {
+      return Response.json(
+        { error: "You must be logged in to view items" },
+        { status: 401 }
+      );
+    }
+
     const items = await db
       .select({
         itemId: item.itemId,
@@ -86,18 +94,12 @@ export async function GET() {
       .leftJoin(itemOwners, eq(item.itemId, itemOwners.itemId))
       .leftJoin(users, eq(itemOwners.ownerId, users.userId))
       .orderBy(asc(item.itemNumber));
-    
+
     return Response.json(items);
-  } catch (error: unknown) {
-    console.error('Get items error:', error);
-    if (error instanceof Error) {
-      return Response.json(
-        { error: "Failed to fetch items" },
-        { status: 500 }
-      );
-    }
+  } catch (error) {
+    console.error("Error fetching items:", error);
     return Response.json(
-      { error: "An unknown error occurred" },
+      { error: "An error occurred while fetching items" },
       { status: 500 }
     );
   }

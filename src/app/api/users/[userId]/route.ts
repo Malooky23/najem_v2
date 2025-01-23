@@ -19,13 +19,13 @@ export async function GET(
     const { userId } = await context.params;
 
     try {
-        const session = await auth();
-        if (!session) {
-            return new Response(JSON.stringify({ error: "Unauthorized" }), {
-                status: 401,
-                headers: { 'Content-Type': 'application/json' },
-            });
-        }
+        // const session = await auth();
+        // if (!session) {
+        //     return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        //         status: 401,
+        //         headers: { 'Content-Type': 'application/json' },
+        //     });
+        // }
 
         const usernameResponse = await username(userId);
         return Response.json(usernameResponse);
