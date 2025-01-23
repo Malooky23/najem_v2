@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { item, itemOwners, users, customer, company } from "@/lib/db/schema";
 import { eq, sql, or, and, isNotNull, isNull, SQLWrapper } from "drizzle-orm";
 
+
+
 export const itemsWithOwners = db
   .select({
     itemId: item.itemId,

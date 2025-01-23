@@ -62,6 +62,7 @@ export function ItemDetails({ item, onSave, onDelete, onClose }: ItemDetailsProp
   const [username, setUsername] = useState<string | undefined>('Loading...');
   useEffect(() => {
     const fetchUsername = async () => {
+      setUsername("Loading...")
       try{
         if (editedItem.createdBy) {
           // const user = await getUsername(editedItem.createdBy.toString());
