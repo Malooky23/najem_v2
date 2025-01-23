@@ -48,7 +48,7 @@ export async function middleware(request: NextRequest) {
       });
 
       // Try with session token first
-      let token = await getToken({ 
+      const token = await getToken({ 
         req: request,
         secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET
       });
