@@ -58,7 +58,7 @@ export function ItemDetails({ item, onSave, onDelete, onClose }: ItemDetailsProp
         CHANGE THIS IMPLEMENTATION TO NOT REQUIRE EXTRA CALLS TO DB. FETCH ALL DATA DIRECTLY.
         Still need to convert ownerId to name!
   */
-  const [username, setUsername] = useState<String | undefined>('Loading...');
+  const [username, setUsername] = useState<string | undefined>('Loading...');
   useEffect(() => {
     const fetchUsername = async () => {
       if (editedItem.createdBy) {
