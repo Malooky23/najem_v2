@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 // Paths that don't require authentication
-const publicPaths = ["/login", "/signup", "/api/auth", "/api/customers"];
+const publicPaths = ["/login", "/signup", "/api/auth"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -19,10 +19,19 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith("/api")) {
     console.log('API route detected:', pathname);
     try {
-      const token = await getToken({ 
+      // Try with NEXTAUTH_SECRET first
+      let token = await getToken({ 
         req: request,
-        secret: process.env.AUTH_SECRET 
+        secret: process.env.NEXTAUTH_SECRET
       });
+
+      // If no token found, try with AUTH_SECRET
+      if (!token) {
+        token = await getToken({
+          req: request,
+          secret: process.env.AUTH_SECRET
+        });
+      }
       
       console.log('Token found:', !!token);
       if (token) {
@@ -30,24 +39,24 @@ export async function middleware(request: NextRequest) {
           email: token.email,
           name: token.name
         });
+        return NextResponse.next();
       }
 
-      // No token found, return 401
-      if (!token) {
-        console.log('No token found for path:', pathname);
-        console.log('Request cookies:', request.cookies);
-        console.log('Request headers:', {
-          authorization: request.headers.get('authorization'),
-          cookie: request.headers.get('cookie')
-        });
-        return new NextResponse(
-          JSON.stringify({ error: "Authentication required" }),
-          {
-            status: 401,
-            headers: { "Content-Type": "application/json" },
-          }
-        );
-      }
+      // No token found with either secret
+      console.log('No token found for path:', pathname);
+      console.log('Request cookies:', request.cookies);
+      console.log('Request headers:', {
+        authorization: request.headers.get('authorization'),
+        cookie: request.headers.get('cookie')
+      });
+      
+      return new NextResponse(
+        JSON.stringify({ error: "Authentication required" }),
+        {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     } catch (error) {
       console.error('Error in middleware:', error);
       return new NextResponse(
