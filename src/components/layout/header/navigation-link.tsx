@@ -7,7 +7,7 @@ export function NavigationLink({ href, label, icon: Icon }: NavLink) {
     <NavigationMenuItem>
       <Link href={href} className="flex items-center gap-2 hover:text-gray-600 transition-colors whitespace-nowrap">
         <Icon className="h-4 w-4" />
-        <span className="hidden sm:inline max-w-[100px] truncate">{label}</span>
+        <span className="hidden xl:inline max-w-[100px] truncate">{label}</span>
       </Link>
     </NavigationMenuItem>
   );

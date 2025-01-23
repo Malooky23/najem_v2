@@ -442,3 +442,4 @@ export const itemOwners = pgTable("item_owners", {
 export type User = InferSelectModel<typeof users>;
 export type Session = InferSelectModel<typeof sessionTable>;
 export type Item = InferSelectModel<typeof item>;
+export type Customer = InferSelectModel<typeof customer>;

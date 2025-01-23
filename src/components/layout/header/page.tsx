@@ -22,7 +22,7 @@ export async function Header() {
           <div className="justify-self-center">
             {session?.user && <NavigationLinks userType={userType} isAdmin={isAdmin} />}
           </div>
-          <div className="justify-self-end">
+          <div className="ml-auto flex items-center space-x-4 min-w-[100px]">
             <UserMenu session={session} />
           </div>
         </NavigationMenu>
