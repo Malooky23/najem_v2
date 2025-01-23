@@ -76,12 +76,12 @@ export const {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
-        token.username = user.username;
-        token.email = user.email;
-        token.userType = user.userType;
-        token.isAdmin = user.isAdmin;
-        token.name = user.name;
+        token.id = user.id as string;
+        token.username = user.username as string;
+        token.email = user.email as string;
+        token.userType = user.userType as "CUSTOMER" | "EMPLOYEE" | "COMPANY";
+        token.isAdmin = user.isAdmin as boolean;
+        token.name = user.name as string;
       }
       return token;
     },
