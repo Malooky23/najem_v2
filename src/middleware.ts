@@ -47,15 +47,23 @@ export async function middleware(request: NextRequest) {
         vercelJwt: maskSecret(vercelJwt)
       });
 
+      // Set NEXTAUTH_URL if not defined
+      if (!process.env.NEXTAUTH_URL) {
+        const protocol = request.headers.get('x-forwarded-proto') || 'http';
+        const host = request.headers.get('host') || '';
+        process.env.NEXTAUTH_URL = `${protocol}://${host}`;
+        console.log('Set NEXTAUTH_URL to:', process.env.NEXTAUTH_URL);
+      }
+
       // Try with session token first
       const token = await getToken({ 
         req: request,
-        secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET
+        secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,
       });
-      
-      console.log('Token found:', !!token);
+
+      // If NextAuth token is valid, proceed
       if (token) {
-        console.log('Token details:', {
+        console.log('Valid NextAuth token found:', {
           email: token.email,
           name: token.name,
           exp: token.exp ? new Date(token.exp * 1000).toISOString() : undefined
@@ -63,7 +71,21 @@ export async function middleware(request: NextRequest) {
         return NextResponse.next();
       }
 
-      // No token found
+      // If no NextAuth token but Vercel JWT exists, validate it (you may want to add more validation here)
+      if (vercelJwt) {
+        try {
+          // Basic validation - check if it's a valid JWT format
+          const [header, payload, signature] = vercelJwt.split('.');
+          if (header && payload && signature) {
+            console.log('Valid Vercel JWT format found');
+            return NextResponse.next();
+          }
+        } catch (error) {
+          console.error('Error validating Vercel JWT:', error);
+        }
+      }
+
+      // No valid token found
       console.log('No valid token found for path:', pathname);
       return new NextResponse(
         JSON.stringify({ error: "Authentication required" }),
@@ -73,7 +95,7 @@ export async function middleware(request: NextRequest) {
         }
       );
     } catch (error) {
-      console.error('Error in middleware:', error);
+      console.error('Error in middleware: here', error);
       return new NextResponse(
         JSON.stringify({ 
           error: "Internal server error in auth middleware",
