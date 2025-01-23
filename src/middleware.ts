@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { auth } from "./lib/auth";
+import { getToken } from "next-auth/jwt";
 
 // Paths that don't require authentication
 const publicPaths = ["/login", "/signup", "/api/auth"];
@@ -18,15 +18,18 @@ export async function middleware(request: NextRequest) {
   // Check if it's an API route
   if (pathname.startsWith("/api")) {
     console.log('API route detected:', pathname);
-    const session = await auth();
+    const token = await getToken({ 
+      req: request,
+      secret: process.env.AUTH_SECRET 
+    });
     
-    console.log('Session found:', !!session);
+    console.log('Token found:', !!token);
 
-    // No session found, return 401
-    if (!session) {
-      console.log('No session found for path:', pathname);
+    // No token found, return 401
+    if (!token) {
+      console.log('No token found for path:', pathname);
       return new NextResponse(
-        JSON.stringify({ error: "Authentication required" }),
+        JSON.stringify({ error: "Authentication required -----1" }),
         {
           status: 401,
           headers: { "Content-Type": "application/json" },
