@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { item, itemOwners, users, customer, company } from "@/lib/db/schema";
-import { eq, sql, or, and, isNotNull, isNull } from "drizzle-orm";
+import { eq, sql, or, and, isNotNull, isNull, SQLWrapper } from "drizzle-orm";
 
 export const itemsWithOwners = db
   .select({
@@ -37,4 +37,19 @@ export const getItemOwnerOptions = db
         eq(users.userType, 'CUSTOMER')
       )
     )
-  ); 
+  );
+
+
+
+export const username = (userId: string) => {
+  return db.query.users.findFirst({
+    where: eq(users.userId, userId),
+    columns: {
+      username: true,
+    },
+  });
+}
+
+
+
+

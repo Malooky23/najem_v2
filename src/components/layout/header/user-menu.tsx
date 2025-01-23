@@ -37,7 +37,7 @@ export function UserMenu({ session }: UserMenuProps) {
                   {session.user.userType === 'EMPLOYEE' && (
                     <div className="text-xs text-gray-500">
                       {/* FIX THIS IN RESPONSIVE */}
-                        ${session.user.userType.charAt(0).toUpperCase()}${session.user.userType.slice(1).toLowerCase()}
+                        {session.user.userType.charAt(0).toUpperCase()}{session.user.userType.slice(1).toLowerCase()}
                         
                     </div>
                   )}

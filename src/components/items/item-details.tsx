@@ -11,7 +11,7 @@ import { PencilIcon, SaveIcon, X, TrashIcon } from "lucide-react";
 import { Item } from "@/lib/types";
 import { formatInTimeZone, toDate } from 'date-fns-tz'
 import { itemTypes } from "@/lib/types";
-import { getUsername } from "@/app/api/users/route";
+// import { getUsername } from "@/app/api/users/[userId]/route";
 
 
 interface ItemDetailsProps {
@@ -58,12 +58,24 @@ export function ItemDetails({ item, onSave, onDelete, onClose }: ItemDetailsProp
         CHANGE THIS IMPLEMENTATION TO NOT REQUIRE EXTRA CALLS TO DB. FETCH ALL DATA DIRECTLY.
         Still need to convert ownerId to name!
   */
+  
   const [username, setUsername] = useState<string | undefined>('Loading...');
   useEffect(() => {
     const fetchUsername = async () => {
-      if (editedItem.createdBy) {
-        const user = await getUsername(editedItem.createdBy.toString());
-        setUsername(user);
+      try{
+        if (editedItem.createdBy) {
+          // const user = await getUsername(editedItem.createdBy.toString());
+  
+          const response = await fetch(`/api/users/${editedItem.createdBy.toString()}`, {
+            method: "GET",
+          });
+          const data = await response.json();
+          console.log("this is username data", data)
+          setUsername(data.username);
+        }
+
+      }catch(error){
+
       }
     };
     fetchUsername();
@@ -87,7 +99,7 @@ export function ItemDetails({ item, onSave, onDelete, onClose }: ItemDetailsProp
 
     // We convert date from DB UTC to GMT +4
     if (key === 'createdAt') {
-        value = formatInTimeZone(toDate(value!.toString()), 'Asia/Dubai', 'EEE, dd-MM-yyyy  HH:mm a');
+      value = formatInTimeZone(toDate(value!.toString()), 'Asia/Dubai', 'EEE, dd-MM-yyyy  HH:mm a');
     }
 
     // Set the item creator username after looking up from created_by userId
@@ -96,11 +108,11 @@ export function ItemDetails({ item, onSave, onDelete, onClose }: ItemDetailsProp
       console.log(value);
       value = username;
     }
-    
+
     if (!isEditing && readOnlyFields.includes(key)) {
       return <div className="text-sm">{value?.toString() || "N/A"}</div>;
     }
-    
+
     if (!isEditing && readOnlyFields.includes(key)) {
       return <div className="text-sm">{value?.toString() || "N/A"}</div>;
     }
@@ -111,7 +123,7 @@ export function ItemDetails({ item, onSave, onDelete, onClose }: ItemDetailsProp
           return (
             <Select
               value={value?.toString() || ""}
-              onValueChange={(newValue) => 
+              onValueChange={(newValue) =>
                 setEditedItem({ ...editedItem, [key]: newValue })
               }
             >
@@ -131,7 +143,7 @@ export function ItemDetails({ item, onSave, onDelete, onClose }: ItemDetailsProp
           return (
             <Textarea
               value={value?.toString() || ""}
-              onChange={(e) => 
+              onChange={(e) =>
                 setEditedItem({ ...editedItem, [key]: e.target.value })
               }
             />
@@ -141,7 +153,7 @@ export function ItemDetails({ item, onSave, onDelete, onClose }: ItemDetailsProp
             <Input
               type={config.type}
               value={value?.toString() || ""}
-              onChange={(e) => 
+              onChange={(e) =>
                 setEditedItem({ ...editedItem, [key]: e.target.value })
               }
               readOnly={config.readonly}
@@ -281,7 +293,7 @@ export function ItemDetails({ item, onSave, onDelete, onClose }: ItemDetailsProp
           </AlertDialogContent>
         </AlertDialog>
       )}
-      
+
       {showDeleteConfirm && (
         <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
           <AlertDialogContent>
