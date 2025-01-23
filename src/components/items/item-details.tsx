@@ -9,8 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PencilIcon, SaveIcon, X, TrashIcon } from "lucide-react";
 import { Item } from "@/lib/types";
-import { format } from "date-fns";
+import { formatInTimeZone, toDate } from 'date-fns-tz'
 import { itemTypes } from "@/lib/types";
+import { getUsername } from "@/app/api/users/route";
+
 
 interface ItemDetailsProps {
   item: Item;
@@ -34,7 +36,10 @@ const fieldConfigs = {
   createdBy: { label: "Created By", type: "text", readonly: true },
   createdAt: { label: "Created At", type: "date", readonly: true },
   updatedAt: { label: "Updated At", type: "date", readonly: true },
+  ownerId: { label: "Owner", type: "text", readonly: true },
 };
+
+
 
 export function ItemDetails({ item, onSave, onDelete, onClose }: ItemDetailsProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -48,6 +53,23 @@ export function ItemDetails({ item, onSave, onDelete, onClose }: ItemDetailsProp
     setIsEditing(false); // Reset editing state when switching items
   }, [item]);
 
+  //Get username from userId of Item creator.
+  /*
+        CHANGE THIS IMPLEMENTATION TO NOT REQUIRE EXTRA CALLS TO DB. FETCH ALL DATA DIRECTLY.
+        Still need to convert ownerId to name!
+  */
+  const [username, setUsername] = useState<String | undefined>('Loading...');
+  useEffect(() => {
+    const fetchUsername = async () => {
+      if (editedItem.createdBy) {
+        const user = await getUsername(editedItem.createdBy.toString());
+        setUsername(user);
+      }
+    };
+    fetchUsername();
+  }, [editedItem.createdBy]);
+
+
   const handleSave = async () => {
     try {
       await onSave(editedItem);
@@ -58,8 +80,26 @@ export function ItemDetails({ item, onSave, onDelete, onClose }: ItemDetailsProp
     }
   };
 
+
+  // Here we render the field values
   const renderField = (key: keyof Item, config: any) => {
-    const value = editedItem[key];
+    let value = editedItem[key];
+
+    // We convert date from DB UTC to GMT +4
+    if (key === 'createdAt') {
+        value = formatInTimeZone(toDate(value!.toString()), 'Asia/Dubai', 'EEE, dd-MM-yyyy  HH:mm a');
+    }
+
+    // Set the item creator username after looking up from created_by userId
+    //Maybe there is a better way to do this
+    if (key === 'createdBy') {
+      console.log(value);
+      value = username;
+    }
+    
+    if (!isEditing && readOnlyFields.includes(key)) {
+      return <div className="text-sm">{value?.toString() || "N/A"}</div>;
+    }
     
     if (!isEditing && readOnlyFields.includes(key)) {
       return <div className="text-sm">{value?.toString() || "N/A"}</div>;
@@ -114,7 +154,7 @@ export function ItemDetails({ item, onSave, onDelete, onClose }: ItemDetailsProp
   };
 
   return (
-    <div className="absolute inset-0 flex flex-col bg-background ml-2 border rounded-md">
+    <div className="absolute inset-0 flex flex-col bg-background ml-2 border rounded-md ">
       {/* Header - fixed height */}
       <div className="flex-none border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex justify-between items-center p-3">
@@ -212,7 +252,7 @@ export function ItemDetails({ item, onSave, onDelete, onClose }: ItemDetailsProp
               .filter(([key]) => !["itemNumber", "itemType", "itemBrand"].includes(key))
               .map(([key, config]) => (
                 <div key={key} className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">
+                  <Label className="text-sm text-muted-foreground">
                     {config.label}
                   </Label>
                   <div className="bg-background rounded-md">

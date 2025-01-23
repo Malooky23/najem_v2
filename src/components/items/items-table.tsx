@@ -64,8 +64,11 @@ export function ItemsTable() {
   const [updatedItemId, setUpdatedItemId] = useState<string | null>(null);
   const [pagination, setPagination] = useState({
     pageIndex: 0,
-    pageSize: 5,
+    pageSize: 50,
   });
+
+  const [manualSort, setManualSort] = useState<boolean>(false)
+
 
   const {
     data: items = [],
@@ -101,7 +104,7 @@ export function ItemsTable() {
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onGlobalFilterChange: setGlobalFilter,
-    manualSorting: true,
+    manualSorting: manualSort,
     pageCount: Math.ceil(items.length / pagination.pageSize),
   });
 
@@ -157,8 +160,13 @@ export function ItemsTable() {
   };
 
   const handleRowClick = (item: Item) => {
-    setSelectedItem(item);
-    setIsDetailsPanelOpen(true);
+    if (isDetailsPanelOpen && selectedItem?.itemId === item.itemId) {
+      setIsDetailsPanelOpen(false);
+    } else {
+      setSelectedItem(item);
+      setIsDetailsPanelOpen(true);
+    }
+
   };
 
   if (isLoading)
@@ -189,7 +197,7 @@ export function ItemsTable() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 flex">
+      <div className="flex-1 min-h-0 flex ">
         <div className="flex-1 overflow-auto border rounded-md">
           <Table>
             <TableHeader className="sticky top-0 bg-background z-10">
@@ -252,7 +260,7 @@ export function ItemsTable() {
         </div>
 
         {isDetailsPanelOpen && (
-          <div className="w-[400px] border-l relative">
+          <div className="w-[400px] border-l relative ">
             {selectedItem && (
               <ItemDetails
                 item={selectedItem}
