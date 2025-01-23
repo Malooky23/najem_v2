@@ -18,6 +18,12 @@ interface UserMenuProps {
   session: Session | null;
 }
 
+// const userType = session.user.userType;
+// const shouldShow = userType === 'EMPLOYEE'; 
+
+// const displayUserType = shouldShow ? 'EMPLOYEE' : `${userType.charAt(0).toUpperCase()}${userType.slice(1).toLowerCase()}`;
+
+
 export function UserMenu({ session }: UserMenuProps) {
   return (
     <NavigationMenuList className="flex items-center gap-4">
@@ -28,9 +34,11 @@ export function UserMenu({ session }: UserMenuProps) {
               <button className="flex items-center gap-2 hover:bg-gray-100 px-3 py-2 rounded-md transition-colors outline-none">
                 <div className="hidden sm:block text-sm text-right mr-2">
                   <div className="font-medium">{session.user.name}</div>
-                  {session.user.userType && (
+                  {session.user.userType === 'EMPLOYEE' && (
                     <div className="text-xs text-gray-500">
-                      {session.user.userType.toLowerCase()}
+                      {/* FIX THIS IN RESPONSIVE */}
+                        ${session.user.userType.charAt(0).toUpperCase()}${session.user.userType.slice(1).toLowerCase()}
+                        
                     </div>
                   )}
                 </div>
@@ -41,15 +49,15 @@ export function UserMenu({ session }: UserMenuProps) {
                 </Avatar>
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent 
+            <DropdownMenuContent
               align="end"
               sideOffset={8}
               className="w-56 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
             >
               <div className="py-1">
                 <DropdownMenuItem asChild>
-                  <Link 
-                    href="/profile" 
+                  <Link
+                    href="/profile"
                     className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 outline-none cursor-pointer"
                   >
                     <User className="h-4 w-4" />

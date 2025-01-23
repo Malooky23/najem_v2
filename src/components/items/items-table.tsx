@@ -214,9 +214,9 @@ export function ItemsTable() {
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                     </TableHead>
                   ))}
                 </TableRow>
@@ -229,18 +229,19 @@ export function ItemsTable() {
                     key={row.id}
                     data-state={row.getIsSelected() && "selected"}
                     className={cn(
-                      "group hover:bg-slate-600 transition-all duration-200 cursor-pointer border-b",
+                      "group hover:bg-slate-100 hover:border-orange-900  transition-all duration-50 cursor-pointer border-b",
                       updatedItemId === row.original.itemId &&
-                        "animate-highlight"
+                      "animate-highlight"
                     )}
                     onClick={() => handleRowClick(row.original)}
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="p-2 text-sm">
+                      <TableCell key={cell.id} className="p-2 text-sm  ">
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext()
                         )}
+                        
                       </TableCell>
                     ))}
                   </TableRow>
@@ -259,18 +260,25 @@ export function ItemsTable() {
           </Table>
         </div>
 
-        {isDetailsPanelOpen && (
-          <div className="w-[400px] border-l relative ">
-            {selectedItem && (
-              <ItemDetails
-                item={selectedItem}
-                onClose={() => setIsDetailsPanelOpen(false)}
-                onSave={handleSaveItem}
-                onDelete={handleDeleteItem}
-              />
-            )}
-          </div>
-        )}
+
+
+        {/* <div className="w-[400px] border-l relative "> */}
+        <div className={cn(
+        "border-l relative transition-all duration-300 overflow-hidden",
+        isDetailsPanelOpen ? "w-[400px]" : "w-[0px]"
+      )}>
+          {selectedItem && (
+            <ItemDetails
+              item={selectedItem}
+              onClose={() => setIsDetailsPanelOpen(false)}
+              onSave={handleSaveItem}
+              onDelete={handleDeleteItem}
+            />
+          )}
+        </div>
+
+        {/* {isDetailsPanelOpen && (
+          )} */}
       </div>
 
       <div className="flex-none mt-4">

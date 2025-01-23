@@ -29,6 +29,8 @@ export const {
               username: users.username,
               isAdmin: users.isAdmin,
               userType: users.userType,
+              firstName: users.firstName,
+              lastName: users.lastName,
               isPasswordValid: sql<boolean>`crypt(${credentials.password}, ${users.passwordHash}) = ${users.passwordHash}`,
             })
             .from(users)
@@ -47,9 +49,11 @@ export const {
             return null;
           }
 
+          const fullName = `${user.firstName.charAt(0).toUpperCase()}${user.firstName.slice(1).toLowerCase()} ${user.lastName.charAt(0).toUpperCase()}${user.lastName.slice(1).toLowerCase()}`;
           const userResult = {
             id: user.userId.toString(),
             email: user.email,
+            name: fullName,
             username: user.username,
             userType: user.userType,
             isAdmin: user.isAdmin,
@@ -73,10 +77,11 @@ export const {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.name = user.name;
+        token.username = user.username;
         token.email = user.email;
         token.userType = user.userType;
         token.isAdmin = user.isAdmin;
+        token.name = user.name;
       }
       return token;
     },

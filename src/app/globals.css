@@ -86,3 +86,13 @@ body {
 .animate-highlight {
   animation: highlight 1s ease-in-out;
 }
+
+.hover-glow {
+  @apply rounded-full px-3 py-1 text-xs font-medium w-24 text-center; 
+  border: 1px solid transparent; 
+  transition: border-color 0.3s ease-in-out; 
+}
+
+.hover-glow:hover {
+  border-color: rgba(0, 0, 0, 0.5); 
+}

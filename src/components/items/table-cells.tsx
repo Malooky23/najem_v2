@@ -12,15 +12,18 @@ export const typeColors: Record<string, string> = {
   };
 
 export function TextCell({ value }: { value: string | number }) {
-  return <span className="group-hover:text-white">{value}</span>;
+
+  //CHANGE ROW CELL FORMATTING HERE
+  return <span className=" hover:underline">{value}</span>;
 }
 
 export function TypeCell({ type }: { type: string }) {
   return (
     <div className="flex items-center">
       <div className={cn(
-        "rounded-full px-3 py-1 text-xs font-medium w-24 text-center",
-        typeColors[type] || "bg-gray-500/20 text-gray-700 group-hover:bg-gray-400 group-hover:text-gray-100"
+        // "rounded-full px-3 py-1 text-xs font-medium w-24 text-center hover-glow",
+        " hover-glow",
+        typeColors[type] || "bg-gray-500/20 text-gray-700 "
       )}>
         {type}
       </div>
