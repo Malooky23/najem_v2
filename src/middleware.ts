@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 // Paths that don't require authentication
-const publicPaths = ["/login", "/signup", "/api/auth"];
+const publicPaths = ["/login", "/signup", "/api/auth", "/api/customers"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -18,20 +18,42 @@ export async function middleware(request: NextRequest) {
   // Check if it's an API route
   if (pathname.startsWith("/api")) {
     console.log('API route detected:', pathname);
-    const token = await getToken({ 
-      req: request,
-      secret: process.env.AUTH_SECRET 
-    });
-    
-    console.log('Token found:', !!token);
+    try {
+      const token = await getToken({ 
+        req: request,
+        secret: process.env.AUTH_SECRET 
+      });
+      
+      console.log('Token found:', !!token);
+      if (token) {
+        console.log('Token details:', {
+          email: token.email,
+          name: token.name
+        });
+      }
 
-    // No token found, return 401
-    if (!token) {
-      console.log('No token found for path:', pathname);
+      // No token found, return 401
+      if (!token) {
+        console.log('No token found for path:', pathname);
+        console.log('Request cookies:', request.cookies);
+        console.log('Request headers:', {
+          authorization: request.headers.get('authorization'),
+          cookie: request.headers.get('cookie')
+        });
+        return new NextResponse(
+          JSON.stringify({ error: "Authentication required" }),
+          {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+    } catch (error) {
+      console.error('Error in middleware:', error);
       return new NextResponse(
-        JSON.stringify({ error: "Authentication required -----1" }),
+        JSON.stringify({ error: "Internal server error in auth middleware" }),
         {
-          status: 401,
+          status: 500,
           headers: { "Content-Type": "application/json" },
         }
       );
