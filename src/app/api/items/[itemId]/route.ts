@@ -1,133 +1,103 @@
 import { type NextRequest } from "next/server";
-import { db } from "@/lib/db";
-import { item, itemOwners } from "@/lib/db/schema";
+import { getItemById, updateItem, deleteItem } from "@/lib/db/queries";
 import { auth } from "@/lib/auth";
-import { eq } from "drizzle-orm";
 import { updateItemSchema } from "@/lib/validations/item";
+import { ZodError } from "zod";
 
-type RouteHandlerContext = {
-  params: Promise<{
-    itemId: string;
-  }>;
-};
+interface RouteContext {
+  params: { itemId: string };
+}
 
 export async function DELETE(
   _request: NextRequest,
-  context: RouteHandlerContext
+  context: RouteContext
 ) {
-  const { itemId } = await context.params;
-
   try {
     const session = await auth();
     if (!session) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { 
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return Response.json(
+        { error: "You must be logged in to delete items" },
+        { status: 401 }
+      );
     }
 
-    await db.transaction(async (tx) => {
-      await tx.delete(itemOwners)
-        .where(eq(itemOwners.itemId, itemId));
+    const { itemId } = context.params;
 
-      await tx.delete(item)
-        .where(eq(item.itemId, itemId));
-    });
+    // Check if item exists
+    const existingItem = await getItemById(itemId);
+    if (!existingItem) {
+      return Response.json(
+        { error: "Item not found" },
+        { status: 404 }
+      );
+    }
 
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    await deleteItem(itemId);
+    return Response.json({ success: true });
   } catch (error) {
-    console.error('Delete item error:', error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Failed to delete item" }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
+    console.error('Error deleting item:', error);
+    return Response.json(
+      { error: "Failed to delete item" },
+      { status: 500 }
     );
   }
 }
 
 export async function PUT(
   request: NextRequest,
-  context: RouteHandlerContext
+  context: RouteContext
 ) {
-  const { itemId } = await context.params;
-
   try {
     const session = await auth();
     if (!session) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { 
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return Response.json(
+        { error: "You must be logged in to update items" },
+        { status: 401 }
+      );
     }
 
+    const { itemId } = context.params;
     const json = await request.json();
     const body = updateItemSchema.parse(json);
 
-    const [updatedItem] = await db.transaction(async (tx) => {
-      const [updated] = await tx
-        .update(item)
-        .set({
-          itemName: body.itemName,
-          itemType: body.itemType,
-          itemBrand: body.itemBrand,
-          itemModel: body.itemModel,
-          itemBarcode: body.itemBarcode,
-          dimensions: body.dimensions,
-          weightGrams: body.weightGrams ? Math.floor(Number(body.weightGrams)) : null,
-          notes: body.notes,
-        })
-        .where(eq(item.itemId, itemId))
-        .returning();
+    // Check if item exists
+    const existingItem = await getItemById(itemId);
+    if (!existingItem) {
+      return Response.json(
+        { error: "Item not found" },
+        { status: 404 }
+      );
+    }
 
-      if (body.ownerId && body.ownerType) {
-        await tx
-          .update(itemOwners)
-          .set({
-            ownerId: body.ownerId,
-            ownerType: body.ownerType,
-          })
-          .where(eq(itemOwners.itemId, itemId));
-      }
+    const updatedItem = await updateItem(
+      itemId,
+      {
+        itemName: body.itemName,
+        itemType: body.itemType,
+        itemBrand: body.itemBrand,
+        itemModel: body.itemModel,
+        itemBarcode: body.itemBarcode,
+        dimensions: body.dimensions,
+        weightGrams: body.weightGrams ? Math.floor(body.weightGrams) : null,
+        notes: body.notes,
+      },
+      body.ownerId,
+      body.ownerType
+    );
 
-      const [completeItem] = await tx
-        .select({
-          itemId: item.itemId,
-          itemNumber: item.itemNumber,
-          itemName: item.itemName,
-          itemType: item.itemType,
-          itemBrand: item.itemBrand,
-          itemModel: item.itemModel,
-          itemBarcode: item.itemBarcode,
-          dimensions: item.dimensions,
-          weightGrams: item.weightGrams,
-          notes: item.notes,
-          createdBy: item.createdBy,
-          createdAt: item.createdAt,
-          ownerId: itemOwners.ownerId,
-          ownerType: itemOwners.ownerType,
-        })
-        .from(item)
-        .leftJoin(itemOwners, eq(item.itemId, itemOwners.itemId))
-        .where(eq(item.itemId, itemId));
-
-      return [completeItem];
-    });
-
-    return new Response(JSON.stringify(updatedItem), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return Response.json(updatedItem);
   } catch (error) {
-    console.error('Update item error:', error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Failed to update item" }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
+    if (error instanceof ZodError) {
+      return Response.json(
+        { error: 'Invalid item data: ' + error.errors[0].message },
+        { status: 400 }
+      );
+    }
+
+    console.error('Error updating item:', error);
+    return Response.json(
+      { error: "Failed to update item" },
+      { status: 500 }
     );
   }
-} 
+}

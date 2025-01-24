@@ -71,14 +71,30 @@ export async function middleware(request: NextRequest) {
         return NextResponse.next();
       }
 
-      // If no NextAuth token but Vercel JWT exists, validate it (you may want to add more validation here)
+      // If no NextAuth token but Vercel JWT exists, validate it
       if (vercelJwt) {
         try {
           // Basic validation - check if it's a valid JWT format
           const [header, payload, signature] = vercelJwt.split('.');
           if (header && payload && signature) {
-            console.log('Valid Vercel JWT format found');
-            return NextResponse.next();
+            // Decode the payload
+            const decodedPayload = JSON.parse(Buffer.from(payload, 'base64').toString());
+            
+            // Validate the token hasn't expired
+            const exp = decodedPayload.iat + (24 * 60 * 60); // Assuming 24h expiry from iat
+            const now = Math.floor(Date.now() / 1000);
+            
+            if (exp > now) {
+              console.log('Valid Vercel JWT found:', {
+                userId: decodedPayload.userId,
+                username: decodedPayload.username,
+                iat: new Date(decodedPayload.iat * 1000).toISOString(),
+                exp: new Date(exp * 1000).toISOString()
+              });
+              return NextResponse.next();
+            } else {
+              console.log('Vercel JWT has expired');
+            }
           }
         } catch (error) {
           console.error('Error validating Vercel JWT:', error);

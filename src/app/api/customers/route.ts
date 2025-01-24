@@ -1,8 +1,17 @@
 import { getAllCustomers } from "@/lib/db/queries";
 import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 
 export async function GET() {
   try {
+    const session = await auth();
+    if (!session) {
+      return NextResponse.json(
+        { error: "You must be logged in to view customers" },
+        { status: 401 }
+      );
+    }
+
     const customers = await getAllCustomers();
     return NextResponse.json(customers);
   } catch (error) {
@@ -12,4 +21,6 @@ export async function GET() {
       { status: 500 }
     );
   }
-} 
+}
+
+// Note: Customer creation and updates are now handled through the users API route

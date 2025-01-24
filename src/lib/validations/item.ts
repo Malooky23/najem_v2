@@ -1,5 +1,4 @@
 import { z } from "zod";
-
 import { itemTypes } from "@/lib/types";
 
 export const itemDimensionSchema = z.object({
@@ -8,32 +7,27 @@ export const itemDimensionSchema = z.object({
   height: z.number().min(0, "Height must be positive").optional(),
 });
 
-export const createItemSchema = z.object({
+const baseItemSchema = z.object({
   itemName: z.string().min(1, "Item name is required").max(50),
   itemType: z.enum(itemTypes),
-  itemModel: z.string().max(100).optional(),
-  itemBrand: z.string().max(100).optional(),
-  weightGrams: z.number().int("Weight must be a whole number").min(0, "Weight must be positive").nullable().optional(),
-  notes: z.string().max(1000).optional(),
-  dimensions: itemDimensionSchema.optional(),
-  itemBarcode: z.string().max(100).optional(),
+  itemModel: z.string().max(100).nullish(),
+  itemBrand: z.string().max(100).nullish(),
+  weightGrams: z.number().int("Weight must be a whole number").min(0, "Weight must be positive").nullish(),
+  notes: z.string().max(1000).nullish(),
+  dimensions: itemDimensionSchema.nullish(),
+  itemBarcode: z.string().max(100).nullish(),
+});
+
+export const createItemSchema = baseItemSchema.extend({
   ownerId: z.string().uuid("Invalid owner ID"),
   ownerType: z.enum(["COMPANY", "CUSTOMER"]),
 });
 
-export const updateItemSchema = z.object({
-  itemName: z.string().min(1),
-  itemType: z.string(),
-  itemBrand: z.string().nullable().optional(),
-  itemModel: z.string().nullable().optional(),
-  itemBarcode: z.string().nullable().optional(),
-  dimensions: z.any().optional(),
-  weightGrams: z.number().int("Weight must be a whole number").min(0, "Weight must be positive").nullable().optional(),
-  notes: z.string().nullable().optional(),
-  ownerId: z.string().nullable().optional(),
-  ownerType: z.string().nullable().optional(),
-});
+export const updateItemSchema = baseItemSchema.extend({
+  ownerId: z.string().uuid("Invalid owner ID").optional(),
+  ownerType: z.enum(["COMPANY", "CUSTOMER"]).optional(),
+}).partial();
 
 export type ItemDimension = z.infer<typeof itemDimensionSchema>;
-
+export type CreateItemInput = z.infer<typeof createItemSchema>;
 export type UpdateItemInput = z.infer<typeof updateItemSchema>;

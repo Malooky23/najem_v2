@@ -15,7 +15,7 @@ import {
   primaryKey,
   pgEnum
 } from "drizzle-orm/pg-core"
-import {InferSelectModel, sql} from "drizzle-orm"
+import {InferColumnsDataTypes, InferSelectModel, sql} from "drizzle-orm"
 
 export const deliveryMethod = pgEnum("delivery_method", ['PICKUP', 'DELIVERY'])
 export const movementType = pgEnum("movement_type", ['IN', 'OUT'])
@@ -25,7 +25,6 @@ export const packingType = pgEnum("packing_type", ['SACK', 'PALLET', 'CARTON', '
 export const userType = pgEnum("user_type", ['CUSTOMER', 'EMPLOYEE', 'COMPANY'])
 export const vendorType = pgEnum("vendor_type", ['FORKLIFT', 'LABOUR', 'OTHER'])
 
-
 export const address = pgTable("address", {
   addressId: uuid("address_id").defaultRandom().primaryKey().notNull(),
   address1: text("address_1").notNull(),
@@ -34,23 +33,22 @@ export const address = pgTable("address", {
   country: text().notNull(),
   postalCode: varchar("postal_code", {length: 20}),
   createdAt: timestamp("created_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
-  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const company = pgTable("company", {
   compId: uuid("comp_id").defaultRandom().primaryKey().notNull(),
-  compName: text("comp_name").notNull(),
+  compName: varchar("comp_name").notNull(),
   compNumber: serial("comp_number").notNull(),
-  email: text(),
+  email: varchar(),
   trn: varchar({length: 15}),
-  mobile: text(),
-  landline: text(),
+  mobile: varchar(),
+  landline: varchar(),
   notes: text(),
   addressId: uuid("address_id"),
   createdAt: timestamp("created_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
-  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
-  unique("company_comp_number_key").on(table.compNumber),
   unique("company_email_key").on(table.email),
   unique("company_trn_key").on(table.trn),
   unique("company_mobile_key").on(table.mobile),
@@ -68,17 +66,18 @@ export const users = pgTable("users", {
   mobileNo2: varchar("mobile_no_2", {length: 20}),
   userType: userType("user_type").notNull(),
   isAdmin: boolean("is_admin").default(false).notNull(),
+  compId: uuid("comp_id").references(() => company.compId),
+  addressId: uuid("address_id").references(() => address.addressId),
   lastLogin: timestamp("last_login", {withTimezone: true, mode: 'string'}),
   createdAt: timestamp("created_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
-  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
   unique("users_username_key").on(table.username),
   unique("users_email_key").on(table.email),
 ]);
 
-
 export const sessionTable = pgTable("session", {
-  id: text("id").primaryKey(),
+  id: serial("id").primaryKey(),
   userId: uuid("user_id")
       .notNull()
       .references(() => users.userId ),
@@ -88,80 +87,47 @@ export const sessionTable = pgTable("session", {
   }).notNull()
 });
 
-
-export const customer = pgTable("customer", {
-  cusId: uuid("cus_id").defaultRandom().primaryKey().notNull(),
-  userId: uuid("user_id").notNull(),
-  compId: uuid("comp_id"),
-  addressId: uuid("address_id"),
-  createdAt: timestamp("created_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
-  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
-}, (table) => [
-  foreignKey({
-      columns: [table.userId],
-      foreignColumns: [users.userId],
-      name: "customer_user_id_fkey"
-  }),
-  foreignKey({
-      columns: [table.compId],
-      foreignColumns: [company.compId],
-      name: "customer_comp_id_fkey"
-  }).onDelete("set null"),
-  foreignKey({
-      columns: [table.addressId],
-      foreignColumns: [address.addressId],
-      name: "customer_address_id_fkey"
-  }).onDelete("set null"),
-  unique("customer_user_id_key").on(table.userId),
-]);
-
-export const employee = pgTable("employee", {
-  empId: uuid("emp_id").defaultRandom().primaryKey().notNull(),
-  userId: uuid("user_id").notNull(),
-  createdAt: timestamp("created_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
-  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
-}, (table) => [
-  foreignKey({
-      columns: [table.userId],
-      foreignColumns: [users.userId],
-      name: "employee_user_id_fkey"
-  }),
-  unique("employee_user_id_key").on(table.userId),
-]);
-
 export const item = pgTable("item", {
   itemId: uuid("item_id").defaultRandom().primaryKey().notNull(),
   itemNumber: serial("item_number").notNull(),
-  itemName: varchar("item_name", {length: 50}).notNull(),
+  itemName: varchar("item_name").notNull(),
   itemType: varchar("item_type", {length: 50}),
   itemBrand: varchar("item_brand", {length: 100}),
   itemModel: varchar("item_model", {length: 100}),
-  itemBarcode: varchar("item_barcode", {length: 100}),
+  itemBarcode: varchar("item_barcode", {length: 100}).unique(),
+  itemCountryOfOrigin: varchar("item_country_of_origin", {length: 100}),
   dimensions: jsonb(),
   weightGrams: integer("weight_grams"),
   notes: text(),
   createdBy: uuid("created_by").notNull(),
   createdAt: timestamp("created_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
-  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
   foreignKey({
       columns: [table.createdBy],
       foreignColumns: [users.userId],
       name: "item_created_by_fkey"
   }).onDelete("restrict"),
-  unique("item_item_number_key").on(table.itemNumber),
-  unique("item_item_barcode_key").on(table.itemBarcode),
 ]);
+
+export const inventoryLocation = pgTable("inventory_location", {
+  inventoryLocationId: uuid("inventory_location_id").defaultRandom().primaryKey().notNull(),
+  locationName: varchar("location_name", {length: 100}),
+  locationCode: varchar("location_code", {length: 50}),
+  locationRoom: varchar("location_room", {length: 50}),
+  locationStand: varchar("location_stand", {length: 50}),
+  notes: text(),
+  createdAt: timestamp("created_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`)
+});
 
 export const inventory = pgTable("inventory", {
   inventoryId: uuid("inventory_id").defaultRandom().primaryKey().notNull(),
   itemId: uuid("item_id").notNull(),
-  locationCode: varchar("location_code", {length: 50}),
   quantity: integer().default(0).notNull(),
-  lastUpdated: timestamp("last_updated", {
-      withTimezone: true,
-      mode: 'string'
-  }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+  inventoryLocationId: uuid("inventory_location_id"),
+  createdAt: timestamp("created_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`)
 }, (table) => [
   foreignKey({
       columns: [table.itemId],
@@ -173,11 +139,11 @@ export const inventory = pgTable("inventory", {
 ]);
 
 export const itemHierarchy = pgTable("item_hierarchy", {
-  rowId: serial("row_id").primaryKey().notNull(),
+  itemHierarchyId: serial("item_hierarchy_id").primaryKey().notNull(),
   parentItemId: uuid("parent_item_id").notNull(),
   childItemId: uuid("child_item_id").notNull(),
   createdAt: timestamp("created_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
-  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
   foreignKey({
       columns: [table.parentItemId],
@@ -197,17 +163,18 @@ export const orders = pgTable("orders", {
   orderId: uuid("order_id").defaultRandom().primaryKey().notNull(),
   orderNumber: serial("order_number").notNull(),
   creatorId: uuid("creator_id").notNull(),
-  cusId: uuid("cus_id").notNull(),
+  ownerId: uuid("owner_id").notNull(),
+  ownerType: userType("owner_type").notNull(),
   orderType: orderType("order_type").notNull(),
   movement: movementType().notNull(),
   packingType: packingType("packing_type").notNull(),
   deliveryMethod: deliveryMethod("delivery_method").notNull(),
   notes: text(),
   status: orderStatus().default('PENDING').notNull(),
-  addressId: uuid("address_id"),
+  addressId: serial("address_id"),
   fulfilledAt: timestamp("fulfilled_at", {withTimezone: true, mode: 'string'}),
   createdAt: timestamp("created_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
-  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
   foreignKey({
       columns: [table.creatorId],
@@ -215,38 +182,31 @@ export const orders = pgTable("orders", {
       name: "orders_creator_id_fkey"
   }).onDelete("restrict"),
   foreignKey({
-      columns: [table.cusId],
-      foreignColumns: [customer.cusId],
-      name: "orders_cus_id_fkey"
-  }).onDelete("restrict"),
-  foreignKey({
       columns: [table.addressId],
       foreignColumns: [address.addressId],
       name: "orders_address_id_fkey"
   }).onDelete("set null"),
-  unique("orders_order_number_key").on(table.orderNumber),
 ]);
 
 export const vendors = pgTable("vendors", {
-  vendorId: uuid("vendor_id").defaultRandom().primaryKey().notNull(),
+  vendorId: uuid("vendor_id").defaultRandom().primaryKey().notNull(),  
   vendorNumber: serial("vendor_number").notNull(),
-  vendorName: varchar("vendor_name", {length: 100}).notNull(),
-  vendorType: vendorType("vendor_type").notNull(),
+  vendorName: varchar("vendor_name").notNull(),
+  vendorType: varchar("vendor_type").notNull(),
   createdAt: timestamp("created_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
-  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
-}, (table) => [
-  unique("vendors_vendor_number_key").on(table.vendorNumber),
-]);
+  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`),
+});
 
 export const vendorServices = pgTable("vendor_services", {
-  vendorServiceId: uuid("vendor_service_id").defaultRandom().primaryKey().notNull(),
+  vendorServiceId: uuid("vendor_services_id").defaultRandom().primaryKey().notNull(),  
   vendorServicesNumber: serial("vendor_services_number").notNull(),
   vendorId: uuid("vendor_id").notNull(),
   serviceName: varchar("service_name", {length: 255}).notNull(),
-  rate: integer().notNull(),
+  rate: numeric("rate", { precision: 10, scale: 2 }).notNull(),
   createdBy: uuid("created_by").notNull(),
+  notes: text(),
   createdAt: timestamp("created_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
-  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
   foreignKey({
       columns: [table.vendorId],
@@ -258,22 +218,23 @@ export const vendorServices = pgTable("vendor_services", {
       foreignColumns: [users.userId],
       name: "vendor_services_created_by_fkey"
   }).onDelete("restrict"),
-  unique("vendor_services_vendor_services_number_key").on(table.vendorServicesNumber),
   check("vendor_services_rate_check", sql`rate
   >= 0`),
 ]);
 
 export const vendorPayment = pgTable("vendor_payment", {
   payId: uuid("pay_id").defaultRandom().primaryKey().notNull(),
+  payNumber: serial("pay_number").notNull(),
   vendorId: uuid("vendor_id").notNull(),
-  amount: numeric().notNull(),
-  empId: uuid("emp_id").notNull(),
+  vendorTxId: uuid("vendor_tx_id").notNull(),
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+  createdBy: uuid("created_by").notNull(),
   paymentDate: timestamp("payment_date", {
       withTimezone: true,
       mode: 'string'
   }).default(sql`CURRENT_TIMESTAMP`).notNull(),
   createdAt: timestamp("created_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
-  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
   foreignKey({
       columns: [table.vendorId],
@@ -281,8 +242,8 @@ export const vendorPayment = pgTable("vendor_payment", {
       name: "vendor_payment_vendor_id_fkey"
   }).onDelete("restrict"),
   foreignKey({
-      columns: [table.empId],
-      foreignColumns: [employee.empId],
+      columns: [table.createdBy],
+      foreignColumns: [users.userId],
       name: "vendor_payment_emp_id_fkey"
   }).onDelete("restrict"),
   check("vendor_payment_amount_check", sql`amount
@@ -291,26 +252,25 @@ export const vendorPayment = pgTable("vendor_payment", {
 
 export const vendorLedger = pgTable("vendor_ledger", {
   ledgerId: uuid("ledger_id").defaultRandom().primaryKey().notNull(),
+  ledgerNumber: serial("ledger_number").notNull(),
   vendorId: uuid("vendor_id").notNull(),
   transactionDate: timestamp("transaction_date", {
       withTimezone: true,
       mode: 'string'
   }).default(sql`CURRENT_TIMESTAMP`).notNull(),
   transactionType: varchar("transaction_type", {length: 50}).notNull(),
-  debit: numeric({precision: 10, scale: 2}).default('0').notNull(),
-  credit: numeric({precision: 10, scale: 2}).default('0').notNull(),
+  debit: numeric("debit", { precision: 10, scale: 2 }).default('0').notNull(),
+  credit: numeric("credit", { precision: 10, scale: 2 }).default('0').notNull(),
   description: text(),
-  relatedTransactionId: uuid("related_transaction_id"),
+  relatedTransactionId: serial("related_transaction_id"),
   createdAt: timestamp("created_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
-  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
   foreignKey({
       columns: [table.vendorId],
       foreignColumns: [vendors.vendorId],
       name: "vendor_ledger_vendor_id_fkey"
   }).onDelete("restrict"),
-  check("vendor_ledger_transaction_type_check", sql`(transaction_type)
-                                                    ::text = ANY ((ARRAY['PAYMENT'::character varying, 'INVOICE'::character varying, 'ADJUSTMENT'::character varying, 'STARTING_BALANCE'::character varying])::text[])`),
   check("vendor_ledger_check", sql`(debit >= (0):: numeric)
                                    AND (credit >= (0)::numeric)`),
   check("vendor_ledger_check1", sql`NOT ((debit = (0)::numeric) AND (credit = (0)::numeric))`),
@@ -324,12 +284,12 @@ export const vendorTransactions = pgTable("vendor_transactions", {
   txDate: timestamp("tx_date", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
   cusId: uuid("cus_id"),
   vendorServiceId: uuid("vendor_service_id").notNull(),
-  rate: integer().notNull(),
-  quantity: integer().notNull(),
-  totalCost: numeric("total_cost", {precision: 10, scale: 2}).generatedAlwaysAs(sql`(rate * quantity)`),
+  rate: numeric("rate", { precision: 10, scale: 2 }).notNull(),
+  quantity: numeric("quantity", { precision: 10, scale: 2 }).notNull(),
+  totalCost: numeric("total_cost", {precision: 10, scale: 2}).notNull(),
   empId: uuid("emp_id").notNull(),
   createdAt: timestamp("created_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
-  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
   foreignKey({
       columns: [table.vendorId],
@@ -343,7 +303,7 @@ export const vendorTransactions = pgTable("vendor_transactions", {
   }).onDelete("set null"),
   foreignKey({
       columns: [table.cusId],
-      foreignColumns: [customer.cusId],
+      foreignColumns: [users.userId],
       name: "vendor_transactions_cus_id_fkey"
   }).onDelete("set null"),
   foreignKey({
@@ -353,10 +313,9 @@ export const vendorTransactions = pgTable("vendor_transactions", {
   }).onDelete("restrict"),
   foreignKey({
       columns: [table.empId],
-      foreignColumns: [employee.empId],
+      foreignColumns: [users.userId],
       name: "vendor_transactions_emp_id_fkey"
   }).onDelete("restrict"),
-  unique("vendor_transactions_vendor_tx_number_key").on(table.vendorTxNumber),
   check("vendor_transactions_rate_check", sql`rate
   >= 0`),
   check("vendor_transactions_quantity_check", sql`quantity
@@ -369,7 +328,7 @@ export const orderItems = pgTable("order_items", {
   itemId: uuid("item_id").notNull(),
   quantity: integer().notNull(),
   createdAt: timestamp("created_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
-  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
   foreignKey({
       columns: [table.orderId],
@@ -381,12 +340,11 @@ export const orderItems = pgTable("order_items", {
       foreignColumns: [item.itemId],
       name: "order_items_item_id_fkey"
   }).onDelete("restrict"),
-  check("order_items_quantity_check", sql`quantity
-  > 0`),
 ]);
 
 export const itemTransactions = pgTable("item_transactions", {
-  itemTxId: serial("item_tx_id").primaryKey().notNull(),
+  itemTxId: uuid("item_tx_id").defaultRandom().primaryKey().notNull(),
+  itemTxNumber: serial("item_tx_number").notNull(),
   orderId: uuid("order_id").notNull(),
   itemId: uuid("item_id").notNull(),
   inventoryId: uuid("inventory_id").notNull(),
@@ -397,7 +355,7 @@ export const itemTransactions = pgTable("item_transactions", {
   notes: text(),
   txDate: timestamp("tx_date", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
   createdAt: timestamp("created_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
-  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at", {withTimezone: true, mode: 'string'}).default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
   foreignKey({
       columns: [table.orderId],
@@ -419,20 +377,18 @@ export const itemTransactions = pgTable("item_transactions", {
 ]);
 
 export const itemOwners = pgTable("item_owners", {
+  itemOwnerId: uuid("item_owner_id").primaryKey().defaultRandom().notNull(),
   itemId: uuid("item_id").notNull(),
   ownerId: uuid("owner_id").notNull(),
-  ownerType: varchar("owner_type", {length: 50}).notNull(),
+  ownerType: userType("owner_type").notNull(),
 }, (table) => [
   foreignKey({
       columns: [table.itemId],
       foreignColumns: [item.itemId],
       name: "item_owners_item_id_fkey"
   }).onDelete("cascade"),
-  primaryKey({columns: [table.itemId, table.ownerId, table.ownerType], name: "item_owners_pkey"}),
 ]);
-
 
 export type User = InferSelectModel<typeof users>;
 export type Session = InferSelectModel<typeof sessionTable>;
 export type Item = InferSelectModel<typeof item>;
-export type Customer = InferSelectModel<typeof customer>;
