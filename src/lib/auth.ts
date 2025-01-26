@@ -1,8 +1,8 @@
-import NextAuth, { User } from "next-auth";
+import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { eq, sql } from "drizzle-orm";
-import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
+import { db } from "@/server/db";
+import { AuthResult } from "next-auth";
+import { sql } from "drizzle-orm";
 
 export const {
   handlers,
@@ -15,54 +15,45 @@ export const {
   },
   providers: [
     CredentialsProvider({
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         try {
           if (!credentials?.email || !credentials?.password) {
-            return null;
+            throw new Error("Missing credentials");
           }
 
-          const userWithPasswordCheck = await db
-            .select({
-              userId: users.userId,
-              email: users.email,
-              passwordHash: users.passwordHash,
-              username: users.username,
-              isAdmin: users.isAdmin,
-              userType: users.userType,
-              firstName: users.firstName,
-              lastName: users.lastName,
-              isPasswordValid: sql<boolean>`crypt(${credentials.password}, ${users.passwordHash}) = ${users.passwordHash}`,
-            })
-            .from(users)
-            .where(eq(users.email, credentials.email.toString()))
-            .limit(1);
+          const ip = req.headers?.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+          const userAgent = req.headers?.get("user-agent") || "unknown";
 
-          if (userWithPasswordCheck.length === 0) {
-            console.log('User not found');
-            return null;
+          // Explicitly type the query result
+          const result = await db.execute<{ auth_result: AuthResult }>(
+            sql`SELECT authenticate_user(
+              ${credentials.email}, 
+              ${credentials.password}, 
+              ${ip}::inet, 
+              ${userAgent}
+            ) as auth_result`
+          );
+
+          if (!result.rows[0]) {
+            throw new Error("Authentication failed");
           }
 
-          const user = userWithPasswordCheck[0];
+          const authData = result.rows[0].auth_result;
           
-          if (!user.isPasswordValid) {
-            console.log('Invalid password');
-            return null;
+          if (authData.status !== 'success' || !authData.user) {
+            throw new Error(authData.message || "Authentication failed");
           }
 
-          const fullName = `${user.firstName.charAt(0).toUpperCase()}${user.firstName.slice(1).toLowerCase()} ${user.lastName.charAt(0).toUpperCase()}${user.lastName.slice(1).toLowerCase()}`;
-          const userResult = {
-            id: user.userId.toString(),
-            email: user.email,
-            name: fullName,
-            username: user.username,
-            userType: user.userType,
-            isAdmin: user.isAdmin,
-          } as User;
-
-          console.log('Login successful for user:', userResult.email);
-          return userResult;
+          return {
+            id: authData.user.user_id,
+            email: authData.user.email,
+            name: `${authData.user.first_name} ${authData.user.last_name}`,
+            isAdmin: authData.user.is_admin,
+            userType: authData.user.user_type
+          };
+          
         } catch (error) {
-          console.error('Auth error:', error);
+          console.error('Authentication error:', error);
           return null;
         }
       },
@@ -75,11 +66,11 @@ export const {
   },
   callbacks: {
     async jwt({ token, user }) {
+
       if (user) {
         token.id = user.id as string;
-        token.username = user.username as string;
         token.email = user.email as string;
-        token.userType = user.userType as "CUSTOMER" | "EMPLOYEE" | "COMPANY";
+        token.userType = user.userType as "CUSTOMER" | "EMPLOYEE" | "DEMO";
         token.isAdmin = user.isAdmin as boolean;
         token.name = user.name as string;
       }
@@ -90,7 +81,7 @@ export const {
         session.user.id = token.id as string;
         session.user.name = token.name as string;
         session.user.email = token.email as string;
-        session.user.userType = token.userType as "CUSTOMER" | "EMPLOYEE" | "COMPANY";
+        session.user.userType = token.userType as "CUSTOMER" | "EMPLOYEE" | "DEMO";
         session.user.isAdmin = token.isAdmin as boolean;
       }
       return session;

@@ -1,4 +1,4 @@
-import { getAllCustomers } from "@/lib/db/queries";
+import { getCustomers } from '@/server/queries/customers';
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 
@@ -12,7 +12,7 @@ export async function GET() {
       );
     }
 
-    const customers = await getAllCustomers();
+    const customers = await getCustomers();
     return NextResponse.json(customers);
   } catch (error) {
     console.error('Error fetching customers:', error);

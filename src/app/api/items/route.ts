@@ -59,32 +59,25 @@ export async function POST(req: Request) {
   }
 }
 
+
 export async function GET(request: Request) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return Response.json(
-        { error: "You must be logged in to view items" },
-        { status: 401 }
-      );
-    }
+  const { searchParams } = new URL(request.url);
+  
+  const page = parseInt(searchParams.get("page") ?? "1");
+  const limit = parseInt(searchParams.get("limit") ?? "50");
+  const sortBy = searchParams.get("sortBy") ?? "itemNumber";
+  const sortOrder = searchParams.get("sortOrder") ?? "asc";
+  const search = searchParams.get("search") ?? "";
+  const type = searchParams.get("type") ?? "";
 
-    const { searchParams } = new URL(request.url);
-    const result = await getItems({
-      page: parseInt(searchParams.get('page') || '1'),
-      limit: parseInt(searchParams.get('limit') || '50'),
-      sortBy: searchParams.get('sortBy') || 'itemNumber',
-      sortOrder: (searchParams.get('sortOrder') || 'asc') as 'asc' | 'desc',
-      search: searchParams.get('search') || '',
-      type: searchParams.get('type') || '',
-    });
+  const result = await getItems({
+    page,
+    limit,
+    sortBy,
+    sortOrder: sortOrder as 'asc' | 'desc',
+    search,
+    type,
+  });
 
-    return Response.json(result);
-  } catch (error) {
-    console.error("Error fetching items:", error);
-    return Response.json(
-      { error: "An error occurred while fetching items" },
-      { status: 500 }
-    );
-  }
+  return Response.json(result);
 }

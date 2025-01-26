@@ -5,14 +5,28 @@ declare module "next-auth" {
     id: string;
     email: string;
     name: string;
-    username: string;
-    userType: "CUSTOMER" | "EMPLOYEE" | "COMPANY";
+    userType: "CUSTOMER" | "EMPLOYEE" | "DEMO";
     isAdmin: boolean;
   }
 
   interface Session {
     user: User;
   }
+
+  export interface AuthResult {
+    status: 'success' | 'error';
+    code?: 'invalid_credentials' | 'server_error';
+    message?: string;
+    user?: {
+      user_id: string;
+      email: string;
+      first_name: string;
+      last_name: string;
+      is_admin: boolean;
+      user_type: "CUSTOMER" | "EMPLOYEE" | "DEMO";
+    };
+  }
+
 }
 
 declare module "next-auth/jwt" {
@@ -20,7 +34,7 @@ declare module "next-auth/jwt" {
     id: string;
     email: string;
     name: string;
-    userType: "CUSTOMER" | "EMPLOYEE" | "COMPANY";
+    userType: "CUSTOMER" | "EMPLOYEE" | "DEMO";
     isAdmin: boolean;
   }
 }

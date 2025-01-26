@@ -1,16 +1,28 @@
 import { z } from "zod";
 
 export const createUserSchema = z.object({
-  username: z.string().min(3).max(50),
   email: z.string().email(),
+  password: z.string().min(6),
   firstName: z.string().min(2).max(50),
   lastName: z.string().min(2).max(50),
-  password: z.string().min(6),
-  mobileNo1: z.string().min(8).max(15),
-  mobileNo2: z.string().min(8).max(15).optional(),
-  userType: z.enum(['CUSTOMER', 'COMPANY', 'EMPLOYEE']),
-  compId: z.string().uuid().optional(),
-  addressId: z.string().uuid().optional(),
+  userType: z.enum(['EMPLOYEE', 'CUSTOMER', 'DEMO']),
+  customerId: z.string().uuid().optional(),
+  isActive: z.boolean().default(true),
+  isAdmin: z.boolean().default(false),
+  // Contact Details
+  contactDetails: z.array(z.object({
+    contactType: z.enum(['email', 'mobile', 'landline', 'other']),
+    contactData: z.string(),
+    isPrimary: z.boolean().default(false),
+  })).optional(),
+  // Address
+  address: z.object({
+    address1: z.string().optional(),
+    address2: z.string().optional(),
+    city: z.string(),
+    country: z.string(),
+    postalCode: z.string().optional(),
+  }).optional(),
 });
 
 export const updateUserSchema = createUserSchema.partial();

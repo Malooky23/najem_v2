@@ -1,1 +1,0 @@
-ALTER TABLE "address" DROP COLUMN "owner_type";

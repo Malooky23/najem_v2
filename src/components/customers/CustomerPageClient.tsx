@@ -1,41 +1,57 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CreateCustomerModal } from './CreateCustomerModal';
-import { CreateCompanyModal } from './CreateCompanyModal';
+import { CreateBusinessModal } from './CreateBusinessModal';
 
 export function CustomerPageClient() {
   const [showCreateCustomer, setShowCreateCustomer] = useState(false);
-  const [showCreateCompany, setShowCreateCompany] = useState(false);
+  const [showCreateBusiness, setShowCreateBusiness] = useState(false);
 
-  // Add click event listeners to the buttons
-  if (typeof window !== 'undefined') {
-    document.addEventListener('click', (e) => {
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (target.closest('.create-customer-button')) {
+      const customerButton = target.closest('.create-customer-button');
+      const businessButton = target.closest('.create-business-button');
+
+      if (customerButton) {
+        e.preventDefault();
         setShowCreateCustomer(true);
       }
-      if (target.closest('.create-company-button')) {
-        setShowCreateCompany(true);
+      if (businessButton) {
+        e.preventDefault();
+        setShowCreateBusiness(true);
       }
-    });
-  }
+    };
+
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, []);
+
+  const handleCustomerCreated = () => {
+    setShowCreateCustomer(false);
+    // You might want to refresh the customer list here
+    window.location.reload();
+  };
+
+  const handleBusinessCreated = () => {
+    setShowCreateBusiness(false);
+    // You might want to refresh the customer list here
+    window.location.reload();
+  };
 
   return (
     <>
-      {showCreateCustomer && (
-        <CreateCustomerModal
-          open={showCreateCustomer}
-          onClose={() => setShowCreateCustomer(false)}
-          companies={[]} // You'll need to fetch companies and pass them here
-        />
-      )}
-      {showCreateCompany && (
-        <CreateCompanyModal
-          open={showCreateCompany}
-          onClose={() => setShowCreateCompany(false)}
-        />
-      )}
+      <CreateCustomerModal
+        open={showCreateCustomer}
+        onClose={() => setShowCreateCustomer(false)}
+        onSuccess={handleCustomerCreated}
+      />
+      <CreateBusinessModal
+        open={showCreateBusiness}
+        onClose={() => setShowCreateBusiness(false)}
+        onSuccess={handleBusinessCreated}
+      />
     </>
   );
-} 
+}

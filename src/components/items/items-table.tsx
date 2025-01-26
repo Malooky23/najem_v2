@@ -44,15 +44,10 @@ import { ItemDetails } from "./item-details";
 import { ChevronRightIcon, ChevronLeftIcon } from "lucide-react";
 import { CreateItemDialog } from "./create-item-dialog";
 
-async function getItems() {
-  const response = await fetch("/api/items");
-  if (!response.ok) {
-    throw new Error("Failed to fetch items");
-  }
-  return response.json();
-}
+
 
 export function ItemsTable() {
+  // States
   const [sorting, setSorting] = useState<SortingState>([
     { id: "itemNumber", desc: false },
   ]);
@@ -67,45 +62,53 @@ export function ItemsTable() {
     pageSize: 50,
   });
 
-  const [manualSort, setManualSort] = useState<boolean>(false)
+  const queryClient = useQueryClient();
 
-
+  // Single query with all parameters
   const {
-    data: items = [],
+    data: itemsData,
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ["items"],
+    queryKey: ['items', pagination.pageIndex, pagination.pageSize, sorting, globalFilter],
     queryFn: async () => {
-      const response = await fetch("/api/items");
-      if (!response.ok) throw new Error("Network response was not ok");
-      const data = await response.json();
-      console.log("Fetched data:", data);
-      return data;
+      const params = new URLSearchParams({
+        page: (pagination.pageIndex + 1).toString(),
+        limit: pagination.pageSize.toString(),
+        search: globalFilter,
+        ...(sorting.length > 0 && {
+          sortBy: sorting[0].id,
+          sortOrder: sorting[0].desc ? 'desc' : 'asc',
+        }),
+      });
+
+      const response = await fetch(`/api/items?${params}`);
+      if (!response.ok) throw new Error('Network response was not ok');
+      return response.json();
     },
   });
 
-
-
-  const queryClient = useQueryClient();
-
+  // Single table configuration
   const table = useReactTable({
-    data: items,
+    data: itemsData?.items ?? [],
     columns,
     state: {
       sorting,
       globalFilter,
       pagination,
+      columnFilters,
+      columnVisibility,
     },
+    pageCount: itemsData?.metadata?.totalPages ?? -1,
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
-    getSortedRowModel: getSortedRowModel(),
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     onGlobalFilterChange: setGlobalFilter,
-    manualSorting: manualSort,
-    pageCount: Math.ceil(items.length / pagination.pageSize),
+    onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
+    manualPagination: true,
+    manualSorting: true,
+    manualFiltering: true,
+    getCoreRowModel: getCoreRowModel(),
   });
 
   const handleSaveItem = async (updatedItem: Item) => {
