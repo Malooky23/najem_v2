@@ -12,6 +12,8 @@ export async function GET() {
       );
     }
 
+
+
     const customers = await getCustomers();
     return NextResponse.json(customers);
   } catch (error) {

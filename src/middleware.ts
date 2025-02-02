@@ -13,27 +13,27 @@ const maskSecret = (secret?: string) => {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  console.log('Middleware processing path:', pathname);
+  //console.log('Middleware processing path:', pathname);
 
   // Check if the path is public
   if (publicPaths.some((path) => pathname.startsWith(path))) {
-    console.log('Public path detected:', pathname);
+    //console.log('Public path detected:', pathname);
     return NextResponse.next();
   }
 
   // Check if it's an API route
   if (pathname.startsWith("/api")) {
-    console.log('API route detected:', pathname);
+    //console.log('API route detected:', pathname);
     try {
       const isVercel = process.env.VERCEL === '1';
-      console.log('Environment:', isVercel ? 'Vercel' : 'Local');
+      //console.log('Environment:', isVercel ? 'Vercel' : 'Local');
       
-      // Log environment variables
-      console.log('Environment variables:', {
-        NEXTAUTH_SECRET: maskSecret(process.env.NEXTAUTH_SECRET),
-        AUTH_SECRET: maskSecret(process.env.AUTH_SECRET),
-        NEXTAUTH_URL: process.env.NEXTAUTH_URL,
-      });
+      // // Log environment variables
+      //console.log('Environment variables:', {
+      //   NEXTAUTH_SECRET: maskSecret(process.env.NEXTAUTH_SECRET),
+      //   AUTH_SECRET: maskSecret(process.env.AUTH_SECRET),
+      //   NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+      // });
       
       // Get all cookies
 
@@ -42,17 +42,17 @@ export async function middleware(request: NextRequest) {
       const sessionToken = request.cookies.get('__Secure-authjs.session-token')?.value;
       const vercelJwt = request.cookies.get('_vercel_jwt')?.value;
       
-      console.log('Token values:', {
-        sessionToken: maskSecret(sessionToken),
-        vercelJwt: maskSecret(vercelJwt)
-      });
+      //console.log('Token values:', {
+      //   sessionToken: maskSecret(sessionToken),
+      //   vercelJwt: maskSecret(vercelJwt)
+      // });
 
       // Set NEXTAUTH_URL if not defined
       if (!process.env.NEXTAUTH_URL) {
         const protocol = request.headers.get('x-forwarded-proto') || 'http';
         const host = request.headers.get('host') || '';
         process.env.NEXTAUTH_URL = `${protocol}://${host}`;
-        console.log('Set NEXTAUTH_URL to:', process.env.NEXTAUTH_URL);
+        //console.log('Set NEXTAUTH_URL to:', process.env.NEXTAUTH_URL);
       }
 
       // Try with session token first
@@ -63,11 +63,15 @@ export async function middleware(request: NextRequest) {
 
       // If NextAuth token is valid, proceed
       if (token) {
-        console.log('Valid NextAuth token found:', {
-          email: token.email,
-          name: token.name,
-          exp: token.exp ? new Date(token.exp * 1000).toISOString() : undefined
-        });
+
+
+        //console.log('Valid NextAuth token found:', {
+        //   email: token.email,
+        //   name: token.name,
+        //   exp: token.exp ? new Date(token.exp * 1000).toISOString() : undefined
+        // });
+
+
         return NextResponse.next();
       }
 
@@ -85,15 +89,17 @@ export async function middleware(request: NextRequest) {
             const now = Math.floor(Date.now() / 1000);
             
             if (exp > now) {
-              console.log('Valid Vercel JWT found:', {
-                userId: decodedPayload.userId,
-                username: decodedPayload.username,
-                iat: new Date(decodedPayload.iat * 1000).toISOString(),
-                exp: new Date(exp * 1000).toISOString()
-              });
+              //console.log('Valid Vercel JWT found:', {
+              //   userId: decodedPayload.userId,
+              //   username: decodedPayload.username,
+              //   iat: new Date(decodedPayload.iat * 1000).toISOString(),
+              //   exp: new Date(exp * 1000).toISOString()
+              // });
+
+              
               return NextResponse.next();
             } else {
-              console.log('Vercel JWT has expired');
+              //console.log('Vercel JWT has expired');
             }
           }
         } catch (error) {
@@ -102,7 +108,7 @@ export async function middleware(request: NextRequest) {
       }
 
       // No valid token found
-      console.log('No valid token found for path:', pathname);
+      //console.log('No valid token found for path:', pathname);
       return new NextResponse(
         JSON.stringify({ error: "Authentication required" }),
         {

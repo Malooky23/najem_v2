@@ -45,19 +45,9 @@ export function FormContactDetailsFields({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 scrollable">
       <div className="flex justify-between items-center">
         <h3 className="font-medium">Contact Details</h3>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={addContact}
-          className="h-8"
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          Add Contact
-        </Button>
       </div>
 
       {Array.from({ length: contactCount }).map((_, index) => (
@@ -95,6 +85,16 @@ export function FormContactDetailsFields({
           </div>
         </div>
       ))}
+              <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={addContact}
+          className="h-8"
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          Add Contact
+        </Button>
     </div>
   );
 }

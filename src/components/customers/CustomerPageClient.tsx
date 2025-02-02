@@ -1,22 +1,23 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { CreateCustomerModal } from './CreateCustomerModal';
-import { CreateBusinessModal } from './CreateBusinessModal';
+import { useState, useEffect } from "react";
+// import { CreateIndividualModal } from "./CreateIndividualModal";
+// import { CreateBusinessModal } from "./CreateBusinessModal";
+import { CreateCustomerModal } from "./CreateCustomerModal";
 
 export function CustomerPageClient() {
-  const [showCreateCustomer, setShowCreateCustomer] = useState(false);
+  const [showCreateIndividual, setShowCreateIndividual] = useState(false);
   const [showCreateBusiness, setShowCreateBusiness] = useState(false);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      const customerButton = target.closest('.create-customer-button');
-      const businessButton = target.closest('.create-business-button');
+      const individualButton = target.closest(".create-individual-button");
+      const businessButton = target.closest(".create-business-button");
 
-      if (customerButton) {
+      if (individualButton) {
         e.preventDefault();
-        setShowCreateCustomer(true);
+        setShowCreateIndividual(true);
       }
       if (businessButton) {
         e.preventDefault();
@@ -24,12 +25,12 @@ export function CustomerPageClient() {
       }
     };
 
-    document.addEventListener('click', handleClick);
-    return () => document.removeEventListener('click', handleClick);
+    document.addEventListener("click", handleClick);
+    return () => document.removeEventListener("click", handleClick);
   }, []);
 
-  const handleCustomerCreated = () => {
-    setShowCreateCustomer(false);
+  const handleIndividualCreated = () => {
+    setShowCreateIndividual(false);
     // You might want to refresh the customer list here
     window.location.reload();
   };
@@ -43,15 +44,18 @@ export function CustomerPageClient() {
   return (
     <>
       <CreateCustomerModal
-        open={showCreateCustomer}
-        onClose={() => setShowCreateCustomer(false)}
-        onSuccess={handleCustomerCreated}
-      />
-      <CreateBusinessModal
         open={showCreateBusiness}
         onClose={() => setShowCreateBusiness(false)}
         onSuccess={handleBusinessCreated}
+        type="business"
       />
+      <CreateCustomerModal
+        open={showCreateIndividual}
+        onClose={() => setShowCreateIndividual(false)}
+        onSuccess={handleBusinessCreated}
+        type="individual"
+      />
+      
     </>
   );
 }

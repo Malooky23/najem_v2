@@ -1,7 +1,5 @@
-// app/dashboard/customers/CreateCustomerModal.tsx
 "use client";
 
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -14,229 +12,366 @@ import {
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { FormInputField } from "@/components/form/form-input-field";
-import { FormSelectField } from "@/components/form/form-select-field";
+import { FormSwitchField } from "@/components/form/form-switch-field";
+import { FormComboboxField } from "@/components/form/form-combobox-field";
 import { toast } from "@/hooks/use-toast";
-import { customerType } from "@/server/db/schema";
-import { FormAddressFields } from "@/components/form/form-address-fields";
-import { FormContactDetailsFields } from "@/components/form/form-contact-details-fields";
-import { createIndividualCustomerSchema, type CreateIndividualCustomerInput } from "@/lib/validations/customer";
-
-const createCustomerSchema = z.object({
-  customerType: z.enum(['INDIVIDUAL', 'BUSINESS']),
-  // Common fields
-  country: z.string().min(1, "Country is required"),
-  notes: z.string().optional(),
-  // Individual fields
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
-  middleName: z.string().optional(),
-  personalId: z.string().optional(),
-  // Business fields
-  businessName: z.string().optional(),
-  taxNumber: z.string().optional(),
-  isTaxRegistered: z.boolean().optional(),
-});
-
-type CreateCustomerInput = z.infer<typeof createCustomerSchema>;
+import {
+  createBusinessCustomerSchema,
+  createIndividualCustomerSchema,
+  ContactTypeType,
+} from "@/lib/validations/customer";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import React from "react";
+import { CONTACT_TYPE_OPTIONS } from "@/constants/contact_details";
+import { COUNTRIES } from "@/constants/countries";
 
 interface CreateCustomerModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  type: "individual" | "business";
 }
 
-export function CreateCustomerModal({ open, onClose, onSuccess }: CreateCustomerModalProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [customerType, setCustomerType] = useState<'INDIVIDUAL' | 'BUSINESS'>('INDIVIDUAL');
+const DEFAULT_VALUES = {
+  businessName: "",
+  firstName: "",
+  middleName: "",
+  lastName: "",
+  personalId: "",
+  country: "",
+  isTaxRegistered: false,
+  taxNumber: "",
+  addAddress: false,
+  address: {
+    address1: "",
+    address2: "",
+    city: "",
+    postalCode: "",
+    country: "",
+  },
+  contacts: [
+    {
+      contact_type: "email" as ContactTypeType,
+      contact_data: "",
+      is_primary: true,
+    },
+  ],
+};
 
-  const form = useForm<CreateCustomerInput>({
-    resolver: zodResolver(createCustomerSchema),
-    defaultValues: {
-      customerType: 'INDIVIDUAL',
-      isTaxRegistered: false
-    }
+export function CreateCustomerModal({
+  open,
+  onClose,
+  onSuccess,
+  type,
+}: CreateCustomerModalProps) {
+  const schema = type === "business" ? createBusinessCustomerSchema : createIndividualCustomerSchema;
+
+  const form = useForm({
+    resolver: zodResolver(schema),
+    defaultValues: DEFAULT_VALUES,
   });
 
-  const individualForm = useForm<CreateIndividualCustomerInput>({
-    resolver: zodResolver(createIndividualCustomerSchema),
-    defaultValues: {
-      contactDetails: [],
-    }
-  });
+  const country = form.watch("country");
 
-  const onSubmit = async (data: CreateCustomerInput) => {
+  React.useEffect(() => {
+    if (country && !form.getValues("address.country")) {
+      form.setValue("address.country", country);
+    }
+  }, [country, form]);
+
+  React.useEffect(() => {
+    if (form.formState.errors) {
+      console.log(form.formState.errors);
+
+      const firstError = Object.values(form.formState.errors)[0];
+      if (firstError) {
+        toast({
+          title: "Validation Error",
+          description: firstError.message,
+          variant: "destructive",
+        });
+      }
+    }
+  }, [form.formState.errors]);
+
+  const handleSubmit = async (data: z.infer<typeof schema>) => {
+    console.log(data);
     try {
-      setIsSubmitting(true);
-      const response = await fetch("/api/customers", {
+      const cleanedData = {
+        ...data,
+        ...(type === "individual" && {
+          personalId: (data as z.infer<typeof createIndividualCustomerSchema>).personalId?.trim() === "" ? null : (data as z.infer<typeof createIndividualCustomerSchema>).personalId,
+        }),
+        ...(type === "business" && {
+          personalId: (data as z.infer<typeof createBusinessCustomerSchema>).taxNumber?.trim() === "" ? null : (data as z.infer<typeof createBusinessCustomerSchema>).taxNumber,
+        }),
+        ...(type === "business" && {
+            taxNumber: (data as z.infer<typeof createBusinessCustomerSchema>).isTaxRegistered 
+              ? (data as z.infer<typeof createBusinessCustomerSchema>).taxNumber 
+              : null,
+        }),
+        ...(data.addAddress ? { address: data.address } : {}),
+        contacts: data.contacts.map(contact => ({
+          contact_type: contact.contact_type.toLowerCase(),
+          contact_data: contact.contact_data,
+          is_primary: contact.is_primary,
+        })),
+        addAddress: undefined,
+      };
+
+      const endpoint = type === "business" ? "/api/customers/business" : "/api/customers/individual";
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(cleanedData),
       });
 
-      if (!response.ok) throw new Error("Failed to create customer");
-      
-      toast({ title: "Success", description: "Customer created successfully" });
-      onClose();
-      form.reset();
-      onSuccess?.();
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: `${type === "business" ? "Business" : "Individual"} created successfully!`,
+        });
+        form.reset();
+        onSuccess?.();
+        onClose();
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || `Failed to create ${type === "business" ? "business" : "individual"}`,
+          variant: "destructive",
+        });
+      }
     } catch (error) {
-      toast({ title: "Error", description: "Failed to create customer", variant: "destructive" });
-    } finally {
-      setIsSubmitting(false);
+      console.error(error);
+      toast({
+        title: "Error",
+        description: `Failed to create ${type === "business" ? "business" : "individual"}`,
+        variant: "destructive",
+      });
     }
   };
 
-  const onIndividualSubmit = async (data: CreateIndividualCustomerInput) => {
-    try {
-      setIsSubmitting(true);
-      const response = await fetch("/api/customers/individual", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) throw new Error("Failed to create customer");
-      
-      toast({ title: "Success", description: "Customer created successfully" });
-      onClose();
-      individualForm.reset();
-    } catch (error) {
-      toast({ 
-        title: "Error", 
-        description: "Failed to create customer", 
-        variant: "destructive" 
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+  const addContact = () => {
+    const currentContacts = form.getValues().contacts;
+    form.setValue("contacts", [
+      ...currentContacts,
+      {
+        contact_type: "email" as ContactTypeType,
+        contact_data: "",
+        is_primary: false,
+      },
+    ]);
   };
+
+  const memoizedCountries = React.useMemo(() => COUNTRIES, []);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-3xl h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Create New Customer</DialogTitle>
+          <DialogTitle>Create New {type === "business" ? "Business" : "Individual"} Customer</DialogTitle>
         </DialogHeader>
+
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormSelectField
-              form={form}
-              name="customerType"
-              label="Customer Type"
-              options={[
-                { value: 'INDIVIDUAL', label: 'Individual' },
-                { value: 'BUSINESS', label: 'Business' }
-              ]}
-              onValueChange={(value) => setCustomerType(value as any)}
-            />
-
-            {/* Common Fields */}
-            <FormInputField
-              form={form}
-              name="country"
-              label="Country"
-              required
-            />
-
-            {/* Conditional Fields */}
-            {customerType === 'INDIVIDUAL' ? (
-              <Form {...individualForm}>
-                <form onSubmit={individualForm.handleSubmit(onIndividualSubmit)} className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-4">
+          <form 
+            onSubmit={form.handleSubmit(handleSubmit)} 
+            className="flex-1 flex flex-col overflow-hidden"
+          >
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto px-6">
+              <div className="space-y-6 pb-6">
+                {/* Basic Information */}
+                <div className="space-y-4">
+                  {type === "business" ? (
+                    <FormInputField
+                      control={form.control}
+                      name="businessName"
+                      label="Business Name"
+                      placeholder="Acme Corp"
+                      required
+                    />
+                  ) : (
+                    <>
                       <FormInputField
-                        form={individualForm}
+                        control={form.control}
                         name="firstName"
                         label="First Name"
+                        placeholder="John"
                         required
                       />
                       <FormInputField
-                        form={individualForm}
+                        control={form.control}
                         name="middleName"
                         label="Middle Name"
+                        placeholder="Doe"
                       />
                       <FormInputField
-                        form={individualForm}
+                        control={form.control}
                         name="lastName"
                         label="Last Name"
+                        placeholder="Smith"
                         required
                       />
                       <FormInputField
-                        form={individualForm}
+                        control={form.control}
                         name="personalId"
                         label="Personal ID"
+                        placeholder="1234567890"
                       />
-                      <FormInputField
-                        form={individualForm}
-                        name="notes"
-                        label="Notes"
-                        multiline
-                      />
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <FormAddressFields form={individualForm} />
-                      <FormContactDetailsFields form={individualForm} />
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end space-x-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={onClose}
-                      disabled={isSubmitting}
-                    >
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? "Creating..." : "Create Customer"}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            ) : (
-              <>
-                <FormInputField
-                  form={form}
-                  name="businessName"
-                  label="Business Name"
-                  required
-                />
-                <FormInputField
-                  form={form}
-                  name="taxNumber"
-                  label="Tax Number"
-                />
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    {...form.register('isTaxRegistered')}
-                    className="h-4 w-4"
+                    </>
+                  )}
+                  <FormComboboxField
+                    control={form.control}
+                    name="country"
+                    label="Country"
+                    placeholder="Select a country"
+                    options={memoizedCountries}
+                    required
                   />
-                  <label>Tax Registered</label>
+                  {type === "business" && (
+                    <>
+                      <FormSwitchField
+                        control={form.control}
+                        form={form}
+                        name="isTaxRegistered"
+                        label="Tax Registered"
+                      />
+                      {form.watch("isTaxRegistered") && (
+                        <FormInputField
+                          control={form.control}
+                          name="taxNumber"
+                          label="Tax Registration Number"
+                          placeholder="Tax ID"
+                          required
+                        />
+                      )}
+                    </>
+                  )}
+                  <FormSwitchField
+                    control={form.control}
+                    form={form}
+                    name="addAddress"
+                    label="Add Address"
+                  />
                 </div>
-              </>
-            )}
 
-            <FormInputField
-              form={form}
-              name="notes"
-              label="Notes"
-              type="textarea"
-            />
+                {/* Address Section */}
+                {form.watch('addAddress') && (
+                  <AddressSection control={form.control} countryOptions={memoizedCountries} />
+                )}
 
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Creating..." : "Create Customer"}
-              </Button>
+                {/* Contacts Section */}
+                <ContactsSection
+                  control={form.control}
+                  form={form}
+                  contacts={form.watch("contacts")}
+                  onAddContact={addContact}
+                />
+              </div>
+            </div>
+
+            {/* Fixed Footer */}
+            <div className="border-t p-6 mt-auto">
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={onClose}>
+                  Cancel
+                </Button>
+                <Button type="submit">Create {type === "business" ? "Business" : "Individual"}</Button>
+              </div>
             </div>
           </form>
         </Form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function AddressSection({ control, countryOptions }: { control: any, countryOptions: typeof COUNTRIES }) {
+  const memoizedCountryOptions = React.useMemo(() => countryOptions, [countryOptions]);
+
+  return (
+    <div className="space-y-4 border p-4 rounded-lg">
+      <h3 className="font-medium">Address Information</h3>
+      <FormInputField
+        control={control}
+        name="address.address1"
+        label="Address 1"
+        required
+      />
+      <FormInputField
+        control={control}
+        name="address.address2"
+        label="Address 2"
+      />
+      <FormInputField
+        control={control}
+        name="address.city"
+        label="City"
+        required
+      />
+      <FormInputField
+        control={control}
+        name="address.postalCode"
+        label="Postal Code"
+        required
+      />
+      <FormComboboxField
+        control={control}
+        name="address.country"
+        label="Country"
+        options={memoizedCountryOptions}
+        required
+      />
+    </div>
+  );
+}
+
+function ContactsSection({
+  control,
+  form,
+  contacts,
+  onAddContact,
+}: {
+  control: any;
+  form: any;
+  contacts: any[];
+  onAddContact: () => void;
+}) {
+  return (
+    <div className="space-y-4 border p-4 rounded-lg">
+      <h3 className="font-medium">Contact Information</h3>
+      {contacts.map((_, index) => (
+        <div key={index} className="space-y-2">
+          <FormInputField
+            control={control}
+            name={`contacts.${index}.contact_data`}
+            label="Contact Data"
+            placeholder="email@example.com or +1234567890"
+            required
+          />
+          <div className="flex gap-4 items-center">
+            <FormInputField
+              control={control}
+              name={`contacts.${index}.contact_type`}
+              label="Type"
+              as="select"
+              placeholder='Email'
+              options={CONTACT_TYPE_OPTIONS}
+            />
+            <FormSwitchField
+              control={control}
+              form={form}
+              name={`contacts.${index}.is_primary`}
+              label="Primary"
+            />
+          </div>
+        </div>
+      ))}
+      <Button type="button" variant="outline" onClick={onAddContact}>
+        Add Contact
+      </Button>
+    </div>
   );
 }

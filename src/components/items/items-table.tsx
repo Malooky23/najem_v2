@@ -14,6 +14,8 @@ import {
 } from "@tanstack/react-table";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { FormProvider, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 import {
   Table,
@@ -39,12 +41,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { columns } from "./columns";
-import { Item } from "@/lib/types";
+import { Item, itemSchema } from "./types";
 import { ItemDetails } from "./item-details";
 import { ChevronRightIcon, ChevronLeftIcon } from "lucide-react";
 import { CreateItemDialog } from "./create-item-dialog";
-
-
 
 export function ItemsTable() {
   // States
@@ -64,6 +64,11 @@ export function ItemsTable() {
 
   const queryClient = useQueryClient();
 
+  const form = useForm<Item>({
+    defaultValues: {},
+    resolver: zodResolver(itemSchema),
+  });
+
   // Single query with all parameters
   const {
     data: itemsData,
@@ -76,14 +81,12 @@ export function ItemsTable() {
         page: (pagination.pageIndex + 1).toString(),
         limit: pagination.pageSize.toString(),
         search: globalFilter,
-        ...(sorting.length > 0 && {
-          sortBy: sorting[0].id,
-          sortOrder: sorting[0].desc ? 'desc' : 'asc',
-        }),
+        sortBy: sorting[0]?.id || 'itemNumber',
+        sortOrder: sorting[0]?.desc ? 'desc' : 'asc',
       });
 
       const response = await fetch(`/api/items?${params}`);
-      if (!response.ok) throw new Error('Network response was not ok');
+      if (!response.ok) throw new Error('Network error');
       return response.json();
     },
   });
@@ -125,8 +128,7 @@ export function ItemsTable() {
           dimensions: updatedItem.dimensions,
           weightGrams: updatedItem.weightGrams || null,
           notes: updatedItem.notes || null,
-          ownerId: updatedItem.ownerId || null,
-          ownerType: updatedItem.ownerType || null,
+          customerId: updatedItem.customerId || null,
         }),
       });
 
@@ -271,12 +273,14 @@ export function ItemsTable() {
         isDetailsPanelOpen ? "w-[400px]" : "w-[0px]"
       )}>
           {selectedItem && (
-            <ItemDetails
-              item={selectedItem}
-              onClose={() => setIsDetailsPanelOpen(false)}
-              onSave={handleSaveItem}
-              onDelete={handleDeleteItem}
-            />
+            <FormProvider {...form}>
+              <ItemDetails
+                item={selectedItem}
+                onClose={() => setIsDetailsPanelOpen(false)}
+                onSave={handleSaveItem}
+                onDelete={handleDeleteItem}
+              />
+            </FormProvider>
           )}
         </div>
 

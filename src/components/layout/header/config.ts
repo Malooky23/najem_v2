@@ -5,37 +5,48 @@ export const navigationConfig: NavConfig = {
   EMPLOYEE: {
     basic: [
       {
-        href: "/orders",
-        label: "Orders",
-        icon: LucideIcons.Package,
-      },
-      {
-        href: "/inventory",
-        label: "Inventory",
-        icon: LucideIcons.Warehouse,
-      },
-      {
-        href: "/items",
-        label: "My Items",
-        icon: LucideIcons.PackageSearch,
-      },
-      {
-        href: "/tx",
-        label: "Transactions",
-        icon: LucideIcons.Receipt,
-      },
-    ],
-    admin: [
-      {
         href: "/customers",
         label: "Customers",
         icon: LucideIcons.Users,
       },
       {
-        href: "/vendors",
-        label: "Vendors",
-        icon: LucideIcons.Truck,
+        href: "/warehouse/orders",
+        label: "Orders",
+        icon: LucideIcons.Package,
       },
+      {
+        href: "/warehouse/items",
+        label: "Items",
+        icon: LucideIcons.PackageCheck,
+      },
+      // {
+      //   href: "/inventory",
+      //   label: "Inventory",
+      //   icon: LucideIcons.Warehouse,
+      // },
+      // {
+      //   href: "/items",
+      //   label: "My Items",
+      //   icon: LucideIcons.PackageSearch,
+      // },
+      // {
+      //   href: "/tx",
+      //   label: "Transactions",
+      //   icon: LucideIcons.Receipt,
+      // },
+      // {
+      //   href: "/vendors",
+      //   label: "Vendors",
+      //   icon: LucideIcons.Truck,
+      // },
+    ],
+    admin: [
+      {
+        href: "/admin",
+        label: "admin",
+        icon: LucideIcons.ToiletIcon,
+      },
+
     ],
   },
   CUSTOMER: [

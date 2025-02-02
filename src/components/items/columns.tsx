@@ -3,15 +3,15 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { ArrowUpDown } from "lucide-react";
-import { Item } from "@/lib/types";
+import { Item } from "./types";
 import { cn } from "@/lib/utils";
-import { TextCell, TypeCell } from "./table-cells";
+import { TextCell, TypeCell, ActionsCell } from "./table-cells";
 
 type ColumnConfig = {
   key: string;
   header: string;
   sortable?: boolean;
-  cellType?: 'text' | 'type' | 'owner';
+  cellType?: 'text' | 'type' | 'owner' | 'actions';
 };
 
 const SortButton = ({ title, column }: { title: string; column: any }) => {
@@ -37,10 +37,8 @@ const ItemCell = ({ row, columnKey, cellType }: { row: any; columnKey: string; c
   switch (cellType) {
     case 'type':
       return <TypeCell type={row.getValue(columnKey)} />;
-    case 'owner':
-      const ownerName = row.getValue(columnKey);
-      const ownerType = row.original.ownerType;
-      return <TextCell value={ownerName ? `${ownerName} (${ownerType})` : "No owner"} />;
+    case 'actions':
+      return <ActionsCell />;
     default:
       return <TextCell value={row.getValue(columnKey)} />;
   }
@@ -54,15 +52,15 @@ const createCell = (key: string, cellType: string = 'text') => {
 };
 
 const columnConfigs: ColumnConfig[] = [
-  { key: "itemNumber", header: "ID", sortable: true },
+  { key: "itemNumber", header: "Item #", sortable: true },
   { key: "itemName", header: "Name", sortable: true },
-  { key: "itemType", header: "Type", cellType: 'type', sortable: true },
+  { key: "packingType", header: "Type", cellType: 'type', sortable: true },
   { key: "itemBrand", header: "Brand" },
   { key: "itemModel", header: "Model" },
   { key: "itemBarcode", header: "Barcode" },
-  { key: "ownerUsername", header: "Owner", sortable: true },
-  { key: "ownerType", header: "Owner Type", cellType: 'type' },
-  // { key: "createdAt", header: "Created At", sortable: true },
+  { key: "customerName", header: "Owner" },
+  { key: "itemCountryOfOrigin", header: "Origin" },
+  { key: "actions", header: "Actions", cellType: 'actions' },
 ];
 
 export const columns: ColumnDef<Item>[] = columnConfigs.map(config => ({

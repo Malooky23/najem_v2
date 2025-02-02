@@ -4,30 +4,45 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { createItemSchema,  type ItemDimension } from "@/lib/validations/item";
-import { CreateItemInput, ItemOwnerOption, itemTypes, ItemType } from "@/lib/types";
+import { createItemSchema, CreateItemInput, itemTypes } from "./types";
 import { useSession } from "next-auth/react";
 import { FormInputField } from "@/components/form/form-input-field";
 import { FormSelectField } from "@/components/form/form-select-field";
+import { EnrichedCustomer } from "@/lib/types/customer";
 
 const FORM_FIELDS = {
   basic: [
     { name: "itemName", label: "Name", required: true },
-    { name: "itemBarcode", label: "Barcode" },
   ],
   details: [
     { name: "itemBrand", label: "Brand" },
     { name: "itemModel", label: "Model" },
+    { name: "itemCountryOfOrigin", label: "Country of Origin" },
+    { name: "itemBarcode", label: "Barcode" },
+
   ],
   dimensions: [
-    { name: "itemDimension.length", label: "Length (cm)", type: "number", min: 0, step: 1 },
-    { name: "itemDimension.width", label: "Width (cm)", type: "number", min: 0, step: 1 },
-    { name: "itemDimension.height", label: "Height (cm)", type: "number", min: 0, step: 1 },
+    { name: "dimensions.length", label: "Length (cm)", type: "number", min: 0, step: 1 },
+    { name: "dimensions.width", label: "Width (cm)", type: "number", min: 0, step: 1 },
+    { name: "dimensions.height", label: "Height (cm)", type: "number", min: 0, step: 1 },
     { name: "weightGrams", label: "Weight (g)", type: "number", min: 0, step: 1 },
   ],
 } as const;
@@ -41,7 +56,7 @@ export function CreateItemDialog({ children }: { children: React.ReactNode }) {
     resolver: zodResolver(createItemSchema),
     defaultValues: {
       itemType: "OTHER",
-      itemDimension: {
+      dimensions: {
         length: undefined,
         width: undefined,
         height: undefined,
@@ -50,45 +65,34 @@ export function CreateItemDialog({ children }: { children: React.ReactNode }) {
     },
   });
 
-  const { data: itemOwners = [] } = useQuery({
-      queryKey: ["itemOwners"],
-      queryFn: async () => {
-          const response = await fetch("/api/item-owners");
-          if (!response.ok) throw new Error("Failed to fetch item owners");
-          return response.json();
-        },
-    });
-    // Update ownerType when ownerId changes
-    useEffect(() => {
-      const subscription = form.watch((value, { name }) => {
-        if (name === 'ownerId') {
-          const owner = itemOwners.find((o: ItemOwnerOption) => o.id === value.ownerId);
-          if (owner) {
-            form.setValue('ownerType', owner.type);
-          }
-        }
-      });
-  
-      return () => subscription.unsubscribe();
-    }, [form, itemOwners]);
-    
-    
+  const { data: customers } = useQuery({
+    queryKey: ["customers"],
+    queryFn: async () => {
+      const response = await fetch("/api/customers");
+      if (!response.ok) throw new Error("Failed to fetch customers");
+      return response.json();
+    },
+    initialData: () => queryClient.getQueryData(["customers"]),
+    staleTime: 60 * 60 * 1000, // 1 hour to match page revalidation
+  });
 
   const createItem = useMutation({
     mutationFn: async (data: CreateItemInput) => {
-      console.log('Mutation called with data:', data);
+      console.log("Mutation called with data:", data);
       const cleanedData = {
         ...data,
-        itemDimension: data.itemDimension ? 
-          Object.fromEntries(
-            Object.entries(data.itemDimension as Record<string, number>)
-              .filter(([_, value]) => value !== undefined)
-          ) 
+        dimensions: data.dimensions?.width && data.dimensions.height && data.dimensions.length
+          ? {
+              width: Number(data.dimensions.width),
+              height: Number(data.dimensions.height),
+              length: Number(data.dimensions.length),
+            }
           : undefined,
-        weightGrams: data.weightGrams ? Math.round(data.weightGrams) : undefined,
+        weightGrams: data.weightGrams ? Number(data.weightGrams) : undefined,
+        createdBy: session?.user?.id,
       };
 
-      console.log('Cleaned data:', cleanedData);
+      console.log("Cleaned data:", cleanedData);
 
       const response = await fetch("/api/items", {
         method: "POST",
@@ -97,7 +101,7 @@ export function CreateItemDialog({ children }: { children: React.ReactNode }) {
       });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create item');
+        throw new Error(errorData.error || "Failed to create item");
       }
       return response.json();
     },
@@ -120,17 +124,17 @@ export function CreateItemDialog({ children }: { children: React.ReactNode }) {
   });
 
   const onSubmit = async (data: CreateItemInput) => {
-    console.log('Form submitted with data:', data);
+    console.log("Form submitted with data:", data);
     try {
       await createItem.mutateAsync(data);
     } catch (error) {
-      console.error('Submit error:', error);
+      console.error("Submit error:", error);
     }
   };
 
   // Add this to debug form validation
   const handleSubmit = form.handleSubmit(onSubmit);
-  console.log('Form state111111111:', {
+  console.log("Form state111111111:", {
     isValid: form.formState.isValid,
     errors: form.formState.errors,
     values: form.getValues(),
@@ -149,48 +153,83 @@ export function CreateItemDialog({ children }: { children: React.ReactNode }) {
               {FORM_FIELDS.basic.map((field) => (
                 <FormInputField
                   key={field.name}
-                  form={form}
-                  {...field}
+                  control={form.control}
+                  name={field.name}
+                  label={field.label}
                 />
               ))}
             </div>
 
+
             <FormSelectField
               form={form}
-              name="itemType"
-              label="Type"
+              name="packingType"
+              label="Packing Type"
               required
-              options={itemTypes.map(type => ({
+              options={itemTypes.map((type) => ({
                 value: type,
-                label: type.replace('_', ' '),
+                label: type.replace("_", " "),
               }))}
               placeholder="Select item type"
             />
 
             <FormSelectField
               form={form}
-              name="ownerId"
-              label="Owner"
+              name="customerId"
+              label="Customer"
               required
-              options={itemOwners.map((owner: ItemOwnerOption) => ({
-                value: owner.id,
-                label: `${owner.name} (${owner.type})`,
-              }))}
-              placeholder="Select owner"
-              onValueChange={(value) => {
-                const owner = itemOwners.find((o: ItemOwnerOption) => o.id === value);
-                if (owner) {
-                  form.setValue("ownerType", owner.type);
-                }
-              }}
+              options={
+                customers
+                  ?.slice() // Create a copy to avoid mutating original array
+                  .sort(
+                    (
+                      a: {
+                        business: { businessName: string };
+                        individual: { firstName: any; lastName: any };
+                      },
+                      b: {
+                        business: { businessName: string };
+                        individual: { firstName: any; lastName: any };
+                      }
+                    ) => {
+                      const aName =
+                        a.business?.businessName ||
+                        `${a.individual?.firstName} ${a.individual?.lastName}`;
+                      const bName =
+                        b.business?.businessName ||
+                        `${b.individual?.firstName} ${b.individual?.lastName}`;
+                      return aName.localeCompare(bName);
+                    }
+                  )
+                  .map(
+                    (customer: {
+                      customerId: any;
+                      business: { businessName: any };
+                      individual: { firstName: any; lastName: any };
+                    }) => ({
+                      value: customer.customerId,
+                      label:
+                        customer.business?.businessName ||
+                        `${customer.individual?.firstName} ${customer.individual?.lastName}`,
+                    })
+                  ) || []
+              }
+              placeholder="Select customer"
             />
+
+            {customers?.length === 0 && (
+              <div className="text-sm text-muted-foreground">
+                No customers found. Please create customers first.
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               {FORM_FIELDS.details.map((field) => (
                 <FormInputField
                   key={field.name}
-                  form={form}
-                  {...field}
+                  control={form.control}
+                  name={field.name}
+                  label={field.label}
                 />
               ))}
             </div>
@@ -199,8 +238,9 @@ export function CreateItemDialog({ children }: { children: React.ReactNode }) {
               {FORM_FIELDS.dimensions.map((field) => (
                 <FormInputField
                   key={field.name}
-                  form={form}
-                  {...field}
+                  control={form.control}
+                  name={field.name}
+                  label={field.label}
                 />
               ))}
             </div>
@@ -213,7 +253,7 @@ export function CreateItemDialog({ children }: { children: React.ReactNode }) {
                   <FormItem>
                     <FormLabel>Notes</FormLabel>
                     <FormControl>
-                      <Textarea {...field} />
+                      <Textarea {...field} value={field.value || ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -230,10 +270,7 @@ export function CreateItemDialog({ children }: { children: React.ReactNode }) {
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                disabled={createItem.isPending}
-              >
+              <Button type="submit" disabled={createItem.isPending}>
                 {createItem.isPending ? "Creating..." : "Create"}
               </Button>
             </div>
@@ -242,4 +279,4 @@ export function CreateItemDialog({ children }: { children: React.ReactNode }) {
       </DialogContent>
     </Dialog>
   );
-} 
+}

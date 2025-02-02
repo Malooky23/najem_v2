@@ -5,14 +5,31 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { PencilIcon, SaveIcon, X, TrashIcon } from "lucide-react";
-import { Item } from "@/lib/types";
-import { formatInTimeZone, toDate } from 'date-fns-tz'
-import { itemTypes } from "@/lib/types";
+import { Item, itemTypes, itemSchema, packingTypeOptions } from "./types";
+import { formatInTimeZone, toDate } from "date-fns-tz";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { FormField, FormItem, FormLabel } from "../ui/form";
+// import { packingTypeOptions } from "@/lib/validations/item";
 // import { getUsername } from "@/app/api/users/[userId]/route";
-
 
 interface ItemDetailsProps {
   item: Item;
@@ -21,7 +38,14 @@ interface ItemDetailsProps {
   onClose: () => void;
 }
 
-const readOnlyFields = ["itemNumber", "createdBy", "createdAt", "updatedAt"];
+const readOnlyFields = [
+  "itemNumber",
+  "stock",
+  "countryOfOrigin",
+  "createdBy",
+  "createdAt",
+  "updatedAt",
+];
 
 const fieldConfigs = {
   itemNumber: { label: "Item Number", type: "text", readonly: true },
@@ -33,19 +57,40 @@ const fieldConfigs = {
   dimensions: { label: "Dimensions", type: "json" },
   weightGrams: { label: "Weight (g)", type: "number" },
   notes: { label: "Notes", type: "textarea" },
+  customerName: { label: "Owner", type: "text", readonly: true },
+  stock: { label: "Stock", type: "json", readonly: true },
+  countryOfOrigin: { label: "Country of Origin", type: "text", readonly: true },
   createdBy: { label: "Created By", type: "text", readonly: true },
   createdAt: { label: "Created At", type: "date", readonly: true },
   updatedAt: { label: "Updated At", type: "date", readonly: true },
-  ownerId: { label: "Owner", type: "text", readonly: true },
 };
 
-
-
-export function ItemDetails({ item, onSave, onDelete, onClose }: ItemDetailsProps) {
+export function ItemDetails({
+  item,
+  onSave,
+  onDelete,
+  onClose,
+}: ItemDetailsProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editedItem, setEditedItem] = useState(item);
+
+  const form = useForm<Item>({
+    resolver: zodResolver(itemSchema),
+    defaultValues: {
+      itemName: item.itemName,
+      itemType: item.itemType,
+      itemBrand: item.itemBrand || "",
+      itemModel: item.itemModel || "",
+      itemBarcode: item.itemBarcode || "",
+      itemCountryOfOrigin: item.itemCountryOfOrigin || '',
+      packingType: item.packingType,
+      weightGrams: item.weightGrams || 0,
+      dimensions: item.dimensions || { width: 0, height: 0, length: 0 },
+      notes: item.notes || "",
+    },
+  });
 
   // Reset edited item when the selected item changes
   useEffect(() => {
@@ -53,34 +98,6 @@ export function ItemDetails({ item, onSave, onDelete, onClose }: ItemDetailsProp
     setIsEditing(false); // Reset editing state when switching items
   }, [item]);
 
-  //Get username from userId of Item creator.
-  /*
-        CHANGE THIS IMPLEMENTATION TO NOT REQUIRE EXTRA CALLS TO DB. FETCH ALL DATA DIRECTLY.
-        Still need to convert ownerId to name!
-  */
-  
-  const [username, setUsername] = useState<string | undefined>('Loading...');
-  useEffect(() => {
-    const fetchUsername = async () => {
-      setUsername("Loading...")
-      try{
-        if (editedItem.createdBy) {
-          // const user = await getUsername(editedItem.createdBy.toString());
-  
-          const response = await fetch(`/api/users/${editedItem.createdBy.toString()}`, {
-            method: "GET",
-          });
-          const data = await response.json();
-          console.log("this is username data", data)
-          setUsername(data.username);
-        }
-
-      }catch(error){
-
-      }
-    };
-    fetchUsername();
-  }, [editedItem.createdBy]);
 
 
   const handleSave = async () => {
@@ -89,25 +106,56 @@ export function ItemDetails({ item, onSave, onDelete, onClose }: ItemDetailsProp
       setIsEditing(false);
       setShowConfirm(false);
     } catch (error) {
-      console.error('Save error:', error);
+      console.error("Save error:", error);
     }
   };
-
 
   // Here we render the field values
   const renderField = (key: keyof Item, config: any) => {
     let value = editedItem[key];
-
+    
     // We convert date from DB UTC to GMT +4
-    if (key === 'createdAt') {
-      value = formatInTimeZone(toDate(value!.toString()), 'Asia/Dubai', 'EEE, dd-MM-yyyy  HH:mm a');
+    if (key === "createdAt" || key === "updatedAt") {
+      value = formatInTimeZone(
+        toDate(value!.toString()),
+        "Asia/Dubai",
+        "EEE, dd-MM-yyyy  HH:mm a"
+      );
     }
 
     // Set the item creator username after looking up from created_by userId
     //Maybe there is a better way to do this
-    if (key === 'createdBy') {
-      console.log(value);
-      value = username;
+    if (key === "dimensions") {
+      if (value) {
+        const dimensions = value as {
+          width?: number;
+          height?: number;
+          length?: number;
+        };
+        return (
+          <div className="flex gap-2">
+            <div className="flex-1 bg-muted/50 rounded-md p-2 text-center">
+              <div className="text-xs text-muted-foreground">W</div>
+              <div className="text-sm font-medium">
+                {dimensions?.width || "N/A"}
+              </div>
+            </div>
+            <div className="flex-1 bg-muted/50 rounded-md p-2 text-center">
+              <div className="text-xs text-muted-foreground">H</div>
+              <div className="text-sm font-medium">
+                {dimensions?.height || "N/A"}
+              </div>
+            </div>
+            <div className="flex-1 bg-muted/50 rounded-md p-2 text-center">
+              <div className="text-xs text-muted-foreground">L</div>
+              <div className="text-sm font-medium">
+                {dimensions?.length || "N/A"}
+              </div>
+            </div>
+          </div>
+        );
+      }
+      return <div className="text-sm">N/A</div>;
     }
 
     if (!isEditing && readOnlyFields.includes(key)) {
@@ -181,7 +229,9 @@ export function ItemDetails({ item, onSave, onDelete, onClose }: ItemDetailsProp
             <Button
               variant="outline"
               size="sm"
-              onClick={() => isEditing ? setShowConfirm(true) : setIsEditing(true)}
+              onClick={() =>
+                isEditing ? setShowConfirm(true) : setIsEditing(true)
+              }
               className="h-6 text-xs px-2"
             >
               {isEditing ? (
@@ -227,7 +277,9 @@ export function ItemDetails({ item, onSave, onDelete, onClose }: ItemDetailsProp
               {isEditing ? (
                 <Select
                   value={editedItem.itemType ?? undefined}
-                  onValueChange={(value) => setEditedItem({ ...editedItem, itemType: value })}
+                  onValueChange={(value) =>
+                    setEditedItem({ ...editedItem, itemType: value })
+                  }
                 >
                   <SelectTrigger className="h-8 text-xs">
                     <SelectValue placeholder="Select type" />
@@ -249,7 +301,9 @@ export function ItemDetails({ item, onSave, onDelete, onClose }: ItemDetailsProp
               {isEditing ? (
                 <Input
                   value={editedItem.itemBrand || ""}
-                  onChange={(e) => setEditedItem({ ...editedItem, itemBrand: e.target.value })}
+                  onChange={(e) =>
+                    setEditedItem({ ...editedItem, itemBrand: e.target.value })
+                  }
                   className="h-8 text-xs"
                   placeholder="Enter brand"
                 />
@@ -262,7 +316,10 @@ export function ItemDetails({ item, onSave, onDelete, onClose }: ItemDetailsProp
           {/* Main Details */}
           <div className="grid gap-3">
             {Object.entries(fieldConfigs)
-              .filter(([key]) => !["itemNumber", "itemType", "itemBrand"].includes(key))
+              .filter(
+                ([key]) =>
+                  !["itemNumber", "itemType", "itemBrand"].includes(key)
+              )
               .map(([key, config]) => (
                 <div key={key} className="space-y-1">
                   <Label className="text-sm text-muted-foreground">
@@ -274,6 +331,32 @@ export function ItemDetails({ item, onSave, onDelete, onClose }: ItemDetailsProp
                 </div>
               ))}
           </div>
+
+          {/* Add new fields */}
+          {/* <FormField
+            control={form.control}
+            name="packingType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Packing Type</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value || "NONE"}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select packing type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {packingTypeOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option.toLowerCase().replace(/_/g, " ")}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )}
+          /> */}
         </div>
       </div>
 
@@ -288,20 +371,28 @@ export function ItemDetails({ item, onSave, onDelete, onClose }: ItemDetailsProp
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setShowConfirm(false)}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleSave}>Save Changes</AlertDialogAction>
+              <AlertDialogCancel onClick={() => setShowConfirm(false)}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleSave}>
+                Save Changes
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
       )}
 
       {showDeleteConfirm && (
-        <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialog
+          open={showDeleteConfirm}
+          onOpenChange={setShowDeleteConfirm}
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Item?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will permanently delete item #{item.itemNumber}. This action cannot be undone.
+                This will permanently delete item #{item.itemNumber}. This
+                action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -323,4 +414,4 @@ export function ItemDetails({ item, onSave, onDelete, onClose }: ItemDetailsProp
       )}
     </div>
   );
-} 
+}

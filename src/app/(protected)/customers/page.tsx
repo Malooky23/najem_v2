@@ -1,4 +1,4 @@
-"use server";
+// "use server";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
@@ -9,23 +9,39 @@ import { CustomersTable } from '@/components/customers/CustomersTable';
 import { getCustomers } from '@/server/queries/customers';
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { unstable_cache as cache } from 'next/cache';
+import { isEmployee, guardEmployee } from "@/app/utils/isEmployee";
+import { TableSkeleton } from "@/components/common/data-table/skeleton";
 
-function TableSkeleton() {
-  return (
-    <div className="space-y-4">
-      <Skeleton className="h-8 w-full" />
-      <Skeleton className="h-[400px] w-full" />
-    </div>
-  );
-}
+const CACHE_TAG = 'customers';
+const REVALIDATE_TIME = 3600; // 1 hour in seconds
+
+// Cached data fetcher
+const getCachedCustomers = cache(
+  async () => {
+    const customers = await getCustomers();
+    return customers;
+  },
+  ['get-customers'], 
+  {
+    tags: [CACHE_TAG],
+    revalidate: REVALIDATE_TIME
+  }
+);
+
+// function TableSkeleton() {
+//   return (
+//     <div className="space-y-4">
+//       <Skeleton className="h-8 w-full" />
+//       <Skeleton className="h-[400px] w-full" />
+//     </div>
+//   );
+// }
+
+
 
 export default async function CustomersPage() {
-  const session = await auth();
-  if (!session?.user) {
-    redirect('/login');
-  }
-
-  const customers = await getCustomers();
+  await guardEmployee();
   
   return (
     <div className="p-8">
@@ -44,7 +60,7 @@ export default async function CustomersPage() {
             <h2 className="text-2xl font-bold">All Customers</h2>
             <div className="space-x-2">
               <Button
-                className="create-customer-button"
+                className="create-individual-button"
                 data-modal-target="create-customer"
               >
                 Add Individual
@@ -59,7 +75,7 @@ export default async function CustomersPage() {
             </div>
           </div>
           <Suspense fallback={<TableSkeleton />}>
-            <CustomersTable initialCustomers={customers} />
+            <CustomersTableWrapper />
           </Suspense>
         </TabsContent>
 
@@ -74,9 +90,7 @@ export default async function CustomersPage() {
             </Button>
           </div>
           <Suspense fallback={<TableSkeleton />}>
-            <CustomersTable 
-              initialCustomers={customers.filter(c => c.customerType === 'INDIVIDUAL')} 
-            />
+            <CustomersTableWrapper type="INDIVIDUAL" />
           </Suspense>
         </TabsContent>
 
@@ -92,12 +106,29 @@ export default async function CustomersPage() {
             </Button>
           </div>
           <Suspense fallback={<TableSkeleton />}>
-            <CustomersTable 
-              initialCustomers={customers.filter(c => c.customerType === 'BUSINESS')} 
-            />
+            <CustomersTableWrapper type="BUSINESS" />
           </Suspense>
         </TabsContent>
       </Tabs>
     </div>
   );
 }
+
+async function CustomersTableWrapper({ type }: { type?: 'INDIVIDUAL' | 'BUSINESS' }) {
+  const customers = await getCachedCustomers();
+  const filteredCustomers = type ? 
+    customers.filter(c => c.customerType === type) : 
+    customers;
+  
+  return (
+    <CustomersTable 
+      initialCustomers={filteredCustomers}
+      pageSize={50}
+      initialPage={1}
+      isLoading={false}
+    />
+  );
+}
+
+// Add page-level revalidation
+export const revalidate = 3600; 

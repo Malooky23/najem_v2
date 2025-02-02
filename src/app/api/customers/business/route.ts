@@ -1,84 +1,57 @@
+/// NEW CLAUDE REWRITE
+'use server'
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/server/db";
-import { customers, businessCustomers, contactDetails, addressDetails, entityContactDetails, entityAddresses } from "@/server/db/schema";
 import { createBusinessCustomerSchema } from "@/lib/validations/customer";
-
-import { Pool, neonConfig } from '@neondatabase/serverless';
-
+import { sql } from "drizzle-orm";
+import { revalidateCustomers } from "@/server/queries/customers";
 
 export async function POST(req: Request) {
   try {
+    // Authentication check
     const session = await auth();
     if (!session?.user) {
-      return new NextResponse("Unauthorized", { status: 401 });
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
+    // Validate request body
     const body = await req.json();
     const validatedData = createBusinessCustomerSchema.parse(body);
 
-    const result = await db.transaction(async (tx) => {
-      // Create customer
-      const customer = await tx
-        .insert(customers)
-        .values({
-          customerType: 'BUSINESS',
-          country: validatedData.country,
-        })
-        .returning({ customerId: customers.customerId });
+    // Execute database function
+    const result = await db.execute<{ result: any }>(sql`
+      SELECT new_business_customer(
+        ${validatedData.country}::TEXT,
+        ${validatedData.businessName}::TEXT,
+        ${validatedData.isTaxRegistered}::BOOLEAN,
+        ${validatedData.taxNumber}::TEXT,
+        ${JSON.stringify(validatedData.address)}::JSONB,
+        ${JSON.stringify(validatedData.contacts)}::JSONB
+      ) as result
+    `);
 
-      // Create business customer
-      const business = await tx
-        .insert(businessCustomers)
-        .values({
-          businessCustomerId: customer[0].customerId,
-          businessName: validatedData.businessName,
-          isTaxRegistered: validatedData.isTaxRegistered,
-          taxNumber: validatedData.taxRegistrationNumber ?? null,
-        })
-        .returning();
+    // Handle database response
+    const dbResult = result.rows[0].result;
+    if (dbResult.error_message) {
+      return NextResponse.json(
+        { success: false, error: dbResult.error_message },
+        { status: 400 }
+      );
+    }
 
-      // Create address if provided
-      if (validatedData.address) {
-        const address = await tx
-          .insert(addressDetails)
-          .values({
-            ...validatedData.address,
-          })
-          .returning({ addressId: addressDetails.addressId });
+    // Use the helper function instead of direct tag revalidation
+    await revalidateCustomers();
 
-        await tx.insert(entityAddresses).values({
-          entityId: customer[0].customerId,
-          entityType: 'CUSTOMER',
-          addressId: address[0].addressId,
-          addressType: 'PRIMARY',
-        });
-      }
-
-      // Create contact details if provided
-      if (validatedData.contactDetails?.length) {
-        for (const contact of validatedData.contactDetails) {
-          const contactDetail = await tx
-            .insert(contactDetails)
-            .values({
-              ...contact,
-            })
-            .returning({ contactDetailsId: contactDetails.contactDetailsId });
-
-          await tx.insert(entityContactDetails).values({
-            entityId: customer[0].customerId,
-            entityType: 'CUSTOMER',
-            contactDetailsId: contactDetail[0].contactDetailsId,
-          });
-        }
-      }
-
-      return { customer: customer[0], business: business[0] };
-    });
-
-    return NextResponse.json(result);
+    return NextResponse.json({ success: true, data: dbResult });
   } catch (error) {
     console.error("[BUSINESS_CUSTOMER_POST]", error);
-    return new NextResponse("Internal error", { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

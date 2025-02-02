@@ -21,10 +21,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full">
-        <Providers>
-
-
-      <body className={`${inter.className} h-full bg-gray-50 overflow-hidden`}>
+      <Providers>
+        <body className={`${inter.className} h-full bg-gray-50`}>
           <div className="h-full flex flex-col">
             <Header />
             <div className="flex-1 pt-12">
@@ -32,8 +30,8 @@ export default function RootLayout({
             </div>
             <Toaster />
           </div>
-      </body>
-        </Providers>
+        </body>
+      </Providers>
     </html>
   );
 }

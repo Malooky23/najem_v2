@@ -1,103 +1,76 @@
-import { type NextRequest } from "next/server";
-import { getItemById, updateItem, deleteItem } from "@/lib/db/queries";
-import { auth } from "@/lib/auth";
-import { updateItemSchema } from "@/lib/validations/item";
-import { ZodError } from "zod";
+// "use server";
+import { NextResponse } from 'next/server';
+import { db } from '@/server/db';
+import { items } from '@/server/db/schema';
+import { eq } from 'drizzle-orm';
+export const dynamic = 'force-dynamic'; // Add this line
 
-interface RouteContext {
-  params: { itemId: string };
-}
-
-export async function DELETE(
-  _request: NextRequest,
-  context: RouteContext
+// GET /api/items/:id - Get single item
+export async function GET(
+  request: Request,
+  { params }: { params: { itemId: string } }
 ) {
   try {
-    const session = await auth();
-    if (!session) {
-      return Response.json(
-        { error: "You must be logged in to delete items" },
-        { status: 401 }
-      );
+    const [item] = await db
+      .select()
+      .from(items)
+      .where(eq(items.itemId, params.itemId));
+
+    if (!item) {
+      return NextResponse.json({ error: 'Item not found' }, { status: 404 });
     }
 
-    const { itemId } = context.params;
-
-    // Check if item exists
-    const existingItem = await getItemById(itemId);
-    if (!existingItem) {
-      return Response.json(
-        { error: "Item not found" },
-        { status: 404 }
-      );
-    }
-
-    await deleteItem(itemId);
-    return Response.json({ success: true });
+    return NextResponse.json(item);
+    
   } catch (error) {
-    console.error('Error deleting item:', error);
-    return Response.json(
-      { error: "Failed to delete item" },
+    return NextResponse.json(
+      { error: 'Failed to fetch item' },
       { status: 500 }
     );
   }
 }
 
+// PUT /api/items/:id - Update item
 export async function PUT(
-  request: NextRequest,
-  context: RouteContext
+  request: Request,
+  { params }: { params: { itemId: string } }
 ) {
   try {
-    const session = await auth();
-    if (!session) {
-      return Response.json(
-        { error: "You must be logged in to update items" },
-        { status: 401 }
-      );
-    }
+    const { itemId } = await params;
+    const body = await request.json();
+    
+    const [updatedItem] = await db
+      .update(items)
+      .set(body)
+      .where(eq(items.itemId, itemId))
+      .returning();
 
-    const { itemId } = context.params;
-    const json = await request.json();
-    const body = updateItemSchema.parse(json);
-
-    // Check if item exists
-    const existingItem = await getItemById(itemId);
-    if (!existingItem) {
-      return Response.json(
-        { error: "Item not found" },
-        { status: 404 }
-      );
-    }
-
-    const updatedItem = await updateItem(
-      itemId,
-      {
-        itemName: body.itemName,
-        itemType: body.itemType,
-        itemBrand: body.itemBrand,
-        itemModel: body.itemModel,
-        itemBarcode: body.itemBarcode,
-        dimensions: body.dimensions,
-        weightGrams: body.weightGrams ? Math.floor(body.weightGrams) : null,
-        notes: body.notes,
-      },
-      body.ownerId,
-      body.ownerType
-    );
-
-    return Response.json(updatedItem);
+    return NextResponse.json(updatedItem);
   } catch (error) {
-    if (error instanceof ZodError) {
-      return Response.json(
-        { error: 'Invalid item data: ' + error.errors[0].message },
-        { status: 400 }
-      );
-    }
+    return NextResponse.json(
+      { error: 'Failed to update item' },
+      { status: 400 }
+    );
+  }
+}
 
-    console.error('Error updating item:', error);
-    return Response.json(
-      { error: "Failed to update item" },
+// DELETE /api/items/:id - Delete item
+export async function DELETE(
+  request: Request,
+  { params }: { params: { itemId: string } }
+) {
+  try {
+    await db
+      .delete(items)
+      .where(eq(items.itemId, params.itemId));
+
+    return NextResponse.json({ success: true });
+    
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Failed to delete item' },
       { status: 500 }
     );
   }
 }
+
