@@ -22,11 +22,12 @@ import {
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { createItemSchema, CreateItemInput, itemTypes } from "./types";
+import { createItemSchema, CreateItemInput, itemTypes, Item } from "./types";
 import { useSession } from "next-auth/react";
 import { FormInputField } from "@/components/form/form-input-field";
 import { FormSelectField } from "@/components/form/form-select-field";
 import { EnrichedCustomer } from "@/lib/types/customer";
+import { z } from "zod";
 
 const FORM_FIELDS = {
   basic: [
@@ -47,7 +48,13 @@ const FORM_FIELDS = {
   ],
 } as const;
 
-export function CreateItemDialog({ children }: { children: React.ReactNode }) {
+export function CreateItemDialog({ 
+  children,
+  onSuccess // Add success callback prop
+}: { 
+  children: React.ReactNode;
+  onSuccess?: (item: Item) => void;
+}) {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
   const { data: session } = useSession();
@@ -105,7 +112,7 @@ export function CreateItemDialog({ children }: { children: React.ReactNode }) {
       }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (item: Item) => {
       queryClient.invalidateQueries({ queryKey: ["items"] });
       toast({
         title: "Success",
@@ -113,6 +120,7 @@ export function CreateItemDialog({ children }: { children: React.ReactNode }) {
       });
       setOpen(false);
       form.reset();
+      onSuccess?.(item);
     },
     onError: (error: Error) => {
       toast({

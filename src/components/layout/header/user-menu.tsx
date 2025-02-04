@@ -13,16 +13,16 @@ import {
 } from "@radix-ui/react-dropdown-menu";
 import { LogoutButton } from "../../auth/logout-button";
 import { Session } from "next-auth";
+import { customAvatar } from "./avatarGenerator";
 
 interface UserMenuProps {
   session: Session | null;
 }
 
 // const userType = session.user.userType;
-// const shouldShow = userType === 'EMPLOYEE'; 
+// const shouldShow = userType === 'EMPLOYEE';
 
 // const displayUserType = shouldShow ? 'EMPLOYEE' : `${userType.charAt(0).toUpperCase()}${userType.slice(1).toLowerCase()}`;
-
 
 export function UserMenu({ session }: UserMenuProps) {
   return (
@@ -34,17 +34,25 @@ export function UserMenu({ session }: UserMenuProps) {
               <button className="flex items-center gap-2 hover:bg-gray-100 px-3 py-2 rounded-md transition-colors outline-none">
                 <div className="hidden sm:block text-sm text-right mr-2">
                   <div className="font-medium">{session.user.name}</div>
-                  {session.user.userType === 'EMPLOYEE' && (
+                  {session.user.userType === "EMPLOYEE" && (
                     <div className="text-xs text-gray-500">
                       {/* FIX THIS IN RESPONSIVE */}
-                        {session.user.userType.charAt(0).toUpperCase()}{session.user.userType.slice(1).toLowerCase()}
-                        
+                      {session.user.userType.charAt(0).toUpperCase()}
+                      {session.user.userType.slice(1).toLowerCase()}
                     </div>
                   )}
                 </div>
                 <Avatar>
                   <AvatarFallback className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center border border-gray-200">
-                    <User className="h-5 w-5 text-gray-600" />
+                    {/* <User className="h-5 w-5 text-gray-600" />  */}
+                    {/* THIS IS WHERE THE AVATAR WILL BE */}
+                    {/* {customAvatar(session.user?.id || '')} */}
+                    <div
+                      className="w-full h-full"
+                      dangerouslySetInnerHTML={{
+                        __html: customAvatar(session.user?.id || "")(),
+                      }}
+                    />
                   </AvatarFallback>
                 </Avatar>
               </button>
@@ -82,4 +90,4 @@ export function UserMenu({ session }: UserMenuProps) {
       )}
     </NavigationMenuList>
   );
-} 
+}

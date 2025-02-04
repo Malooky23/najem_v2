@@ -46,9 +46,7 @@ export const contactDetails = pgTable("contact_details", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
-    () => sql`CURRENT_TIMESTAMP`
-  ),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
 });
 
 export const entityContactDetails = pgTable("entity_contact_details", {
@@ -81,9 +79,7 @@ export const addressDetails = pgTable("address_details", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
-    () => sql`CURRENT_TIMESTAMP`
-  ),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
 });
 
 export const entityAddresses = pgTable("entity_addresses", {
@@ -113,9 +109,7 @@ export const individualCustomers = pgTable("individual_customers", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
-    () => sql`CURRENT_TIMESTAMP`
-  ),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
 });
 
 // Business Customer Details
@@ -131,9 +125,7 @@ export const businessCustomers = pgTable("business_customers", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
-    () => sql`CURRENT_TIMESTAMP`
-  ),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
 });
 
 //CUSTOMERS - Individual or Business
@@ -148,9 +140,7 @@ export const customers = pgTable("customers", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
-    () => sql`CURRENT_TIMESTAMP`
-  ),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
 });
 
 // Relations
@@ -186,7 +176,7 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at", {
     withTimezone: true,
     mode: "string",
-  }).$onUpdate(() => sql`CURRENT_TIMESTAMP`),
+  }),
 });
 
 // SESSIONS
@@ -211,9 +201,7 @@ export const locations = pgTable("locations", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
-    () => sql`CURRENT_TIMESTAMP`
-  ),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
 });
 
 // Item table
@@ -242,9 +230,13 @@ export const items = pgTable("items", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
-    () => sql`CURRENT_TIMESTAMP`
-  ),
+
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
+
+  // THIS IS NOT WORKING
+  //   updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+  //     () => sql`CURRENT_TIMESTAMP`
+  //   ),
 });
 
 // Inventory tracking tables
@@ -287,6 +279,11 @@ export const stockMovements = pgTable("stock_movements", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
+});
+
+export const deletedItems = pgTable('deleted_items', {
+  itemId: uuid('item_id').primaryKey().notNull(),
+  deletedAt: timestamp('deleted_at').default(sql`CURRENT_TIMESTAMP`),
 });
 
 export type User = typeof users.$inferSelect;

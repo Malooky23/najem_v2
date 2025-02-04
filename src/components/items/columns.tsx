@@ -1,8 +1,8 @@
 "use client";
 
-import { ColumnDef } from "@tanstack/react-table";
+import { ColumnDef, Column } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, Edit, Trash } from "lucide-react";
 import { Item } from "./types";
 import { cn } from "@/lib/utils";
 import { TextCell, TypeCell, ActionsCell } from "./table-cells";
@@ -28,25 +28,71 @@ const SortButton = ({ title, column }: { title: string; column: any }) => {
 };
 SortButton.displayName = "SortButton";
 
-const createHeader = (title: string, column: any, sortable: boolean = false) => {
+const createHeader = (
+  title: string, 
+  column: Column<Item, unknown>, 
+  sortable: boolean = false
+) => {
   if (!sortable) return title;
   return <SortButton title={title} column={column} />;
 };
 
-const ItemCell = ({ row, columnKey, cellType }: { row: any; columnKey: string; cellType: string }) => {
+const ItemCell = ({ row, columnKey, cellType, onEdit, onDelete }: { 
+  row: any, 
+  columnKey: string, 
+  cellType: string,
+  onEdit: (item: Item) => void,
+  onDelete: (item: Item) => void
+}) => {
   switch (cellType) {
     case 'type':
       return <TypeCell type={row.getValue(columnKey)} />;
     case 'actions':
-      return <ActionsCell />;
+      return (
+        <div className="flex gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 hover:bg-gray-200"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(row.original);
+            }}
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 hover:bg-red-200 hover:text-red-600"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(row.original);
+            }}
+          >
+            <Trash className="h-4 w-4" />
+          </Button>
+        </div>
+      );
     default:
       return <TextCell value={row.getValue(columnKey)} />;
   }
 };
 ItemCell.displayName = "ItemCell";
 
-const createCell = (key: string, cellType: string = 'text') => {
-  const CellRenderer = ({ row }: any) => <ItemCell row={row} columnKey={key} cellType={cellType} />;
+const createCell = (key: string, cellType: string = 'text', handlers?: { 
+  onEdit: (item: Item) => void,
+  onDelete: (item: Item) => void 
+}) => {
+  const CellRenderer = ({ row }: any) => (
+    <ItemCell 
+      row={row} 
+      columnKey={key} 
+      cellType={cellType}
+      onEdit={handlers?.onEdit || (() => {})}
+      onDelete={handlers?.onDelete || (() => {})}
+    />
+  );
   CellRenderer.displayName = `CellRenderer_${key}`;
   return CellRenderer;
 };
@@ -60,11 +106,15 @@ const columnConfigs: ColumnConfig[] = [
   { key: "itemBarcode", header: "Barcode" },
   { key: "customerName", header: "Owner" },
   { key: "itemCountryOfOrigin", header: "Origin" },
-  { key: "actions", header: "Actions", cellType: 'actions' },
+  // { key: "actions", header: "Actions", cellType: 'actions' },
 ];
 
-export const columns: ColumnDef<Item>[] = columnConfigs.map(config => ({
+export const getColumns = (handlers: { 
+  onEdit: (item: Item) => void,
+  onDelete: (item: Item) => void 
+}) => columnConfigs.map(config => ({
   accessorKey: config.key,
-  header: ({ column }) => createHeader(config.header, column, config.sortable),
-  cell: createCell(config.key, config.cellType),
+  header: ({ column }: { column: Column<Item, unknown> }) => 
+    createHeader(config.header, column, config.sortable),
+  cell: createCell(config.key, config.cellType, handlers)
 })); 

@@ -8,13 +8,16 @@ export const dynamic = 'force-dynamic'; // Add this line
 // GET /api/items/:id - Get single item
 export async function GET(
   request: Request,
-  { params }: { params: { itemId: string } }
+  { params }: { params: Promise<{ itemId: string }> }
 ) {
+  // Await the params promise first
+  const { itemId } = await params;
+  
   try {
     const [item] = await db
       .select()
       .from(items)
-      .where(eq(items.itemId, params.itemId));
+      .where(eq(items.itemId, itemId));
 
     if (!item) {
       return NextResponse.json({ error: 'Item not found' }, { status: 404 });
@@ -32,21 +35,26 @@ export async function GET(
 
 // PUT /api/items/:id - Update item
 export async function PUT(
-  request: Request,
-  { params }: { params: { itemId: string } }
-) {
+    request: Request,
+    { params }: { params: Promise<{ itemId: string }> }
+  ) {
   try {
-    const { itemId } = await params;
+    const resolvedParams = await params;
+    const { itemId } = resolvedParams;
+    console.log("itemId", itemId);
     const body = await request.json();
-    
+    console.log("body", body);
+
     const [updatedItem] = await db
       .update(items)
       .set(body)
       .where(eq(items.itemId, itemId))
       .returning();
+    console.log("updatedItem", updatedItem);
 
     return NextResponse.json(updatedItem);
   } catch (error) {
+    console.error("Error updating item:", error);
     return NextResponse.json(
       { error: 'Failed to update item' },
       { status: 400 }
@@ -59,10 +67,13 @@ export async function DELETE(
   request: Request,
   { params }: { params: { itemId: string } }
 ) {
+  // Add await for params access
+  const { itemId } = params;
+  
   try {
     await db
       .delete(items)
-      .where(eq(items.itemId, params.itemId));
+      .where(eq(items.itemId, itemId));
 
     return NextResponse.json({ success: true });
     

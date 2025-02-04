@@ -28,6 +28,7 @@ import { formatInTimeZone, toDate } from "date-fns-tz";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormField, FormItem, FormLabel } from "../ui/form";
+import { COUNTRIES } from "@/constants/countries";
 // import { packingTypeOptions } from "@/lib/validations/item";
 // import { getUsername } from "@/app/api/users/[userId]/route";
 
@@ -41,7 +42,6 @@ interface ItemDetailsProps {
 const readOnlyFields = [
   "itemNumber",
   "stock",
-  "countryOfOrigin",
   "createdBy",
   "createdAt",
   "updatedAt",
@@ -57,9 +57,13 @@ const fieldConfigs = {
   dimensions: { label: "Dimensions", type: "json" },
   weightGrams: { label: "Weight (g)", type: "number" },
   notes: { label: "Notes", type: "textarea" },
-  customerName: { label: "Owner", type: "text", readonly: true },
+  customerName: { label: "Owner", type: "text",  },
   stock: { label: "Stock", type: "json", readonly: true },
-  countryOfOrigin: { label: "Country of Origin", type: "text", readonly: true },
+  itemCountryOfOrigin: { 
+    label: "Country of Origin", 
+    type: "select", 
+    options: COUNTRIES 
+  },
   createdBy: { label: "Created By", type: "text", readonly: true },
   createdAt: { label: "Created At", type: "date", readonly: true },
   updatedAt: { label: "Updated At", type: "date", readonly: true },
@@ -116,46 +120,91 @@ export function ItemDetails({
     
     // We convert date from DB UTC to GMT +4
     if (key === "createdAt" || key === "updatedAt") {
-      value = formatInTimeZone(
-        toDate(value!.toString()),
-        "Asia/Dubai",
-        "EEE, dd-MM-yyyy  HH:mm a"
-      );
+      if (value) {
+        value = formatInTimeZone(
+          toDate(value!.toString()),
+          "Asia/Dubai",
+          "EEE, dd-MM-yyyy  HH:mm a"
+        );
+      }
     }
 
     // Set the item creator username after looking up from created_by userId
     //Maybe there is a better way to do this
     if (key === "dimensions") {
-      if (value) {
-        const dimensions = value as {
-          width?: number;
-          height?: number;
-          length?: number;
-        };
+      if (isEditing) {
         return (
           <div className="flex gap-2">
-            <div className="flex-1 bg-muted/50 rounded-md p-2 text-center">
-              <div className="text-xs text-muted-foreground">W</div>
-              <div className="text-sm font-medium">
-                {dimensions?.width || "N/A"}
-              </div>
-            </div>
-            <div className="flex-1 bg-muted/50 rounded-md p-2 text-center">
-              <div className="text-xs text-muted-foreground">H</div>
-              <div className="text-sm font-medium">
-                {dimensions?.height || "N/A"}
-              </div>
-            </div>
-            <div className="flex-1 bg-muted/50 rounded-md p-2 text-center">
-              <div className="text-xs text-muted-foreground">L</div>
-              <div className="text-sm font-medium">
-                {dimensions?.length || "N/A"}
-              </div>
-            </div>
+            <Input
+              type="number"
+              placeholder="Width"
+              value={editedItem.dimensions?.width || ""}
+              onChange={(e) => 
+                setEditedItem({
+                  ...editedItem,
+                  dimensions: {
+                    ...editedItem.dimensions,
+                    width: Number(e.target.value)
+                  }
+                })
+              }
+              className="text-center"
+            />
+            <Input
+              type="number"
+              placeholder="Height"
+              value={editedItem.dimensions?.height || ""}
+              onChange={(e) => 
+                setEditedItem({
+                  ...editedItem,
+                  dimensions: {
+                    ...editedItem.dimensions,
+                    height: Number(e.target.value)
+                  }
+                })
+              }
+              className="text-center"
+            />
+            <Input
+              type="number"
+              placeholder="Length"
+              value={editedItem.dimensions?.length || ""}
+              onChange={(e) => 
+                setEditedItem({
+                  ...editedItem,
+                  dimensions: {
+                    ...editedItem.dimensions,
+                    length: Number(e.target.value)
+                  }
+                })
+              }
+              className="text-center"
+            />
           </div>
         );
       }
-      return <div className="text-sm">N/A</div>;
+      return (
+        <div className="flex gap-2">
+          <div className="flex-1 bg-muted/50 rounded-md p-2 text-center">
+            <div className="text-xs text-muted-foreground">W</div>
+            <div className="text-sm font-medium">
+              {editedItem.dimensions?.width || "N/A"}
+            </div>
+          </div>
+          <div className="flex-1 bg-muted/50 rounded-md p-2 text-center">
+            <div className="text-xs text-muted-foreground">H</div>
+            <div className="text-sm font-medium">
+              {editedItem.dimensions?.height || "N/A"}
+            </div>
+          </div>
+          <div className="flex-1 bg-muted/50 rounded-md p-2 text-center">
+            <div className="text-xs text-muted-foreground">L</div>
+            <div className="text-sm font-medium">
+              {editedItem.dimensions?.length || "N/A"}
+            </div>
+          </div>
+        </div>
+      );
     }
 
     if (!isEditing && readOnlyFields.includes(key)) {
@@ -177,12 +226,12 @@ export function ItemDetails({
               }
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select..." />
+                <SelectValue placeholder="Select Country..." />
               </SelectTrigger>
               <SelectContent>
-                {config.options.map((option: string) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
+                {config.options.map((option: { value: string; label: string }) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -211,7 +260,11 @@ export function ItemDetails({
       }
     }
 
-    return <div className="text-sm">{value?.toString() || "N/A"}</div>;
+    return (
+      <div className="text-sm">
+        {config.options?.find((opt: { value: string }) => opt.value === value)?.label || "N/A"}
+      </div>
+    );
   };
 
   return (
@@ -226,35 +279,52 @@ export function ItemDetails({
             </p>
           </div>
           <div className="flex gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                isEditing ? setShowConfirm(true) : setIsEditing(true)
-              }
-              className="h-6 text-xs px-2"
-            >
-              {isEditing ? (
-                <>
+            {isEditing ? (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowConfirm(true)}
+                  className="h-6 text-xs px-2"
+                >
                   <SaveIcon className="h-3 w-3 mr-1" />
                   Save
-                </>
-              ) : (
-                <>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setEditedItem(item); // Reset to original item
+                    setIsEditing(false);
+                  }}
+                  className="h-6 text-xs px-2"
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Cancel
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditing(true)}
+                  className="h-6 text-xs px-2"
+                >
                   <PencilIcon className="h-3 w-3 mr-1" />
                   Edit
-                </>
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowDeleteConfirm(true)}
-              className="h-6 text-xs px-2 text-red-600 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
-            >
-              <TrashIcon className="h-3 w-3 mr-1" />
-              Delete
-            </Button>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="h-6 text-xs px-2 text-red-600 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                >
+                  <TrashIcon className="h-3 w-3 mr-1" />
+                  Delete
+                </Button>
+              </>
+            )}
             <Button
               variant="ghost"
               size="sm"

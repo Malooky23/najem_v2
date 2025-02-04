@@ -19,8 +19,8 @@ export interface Item {
   customerId: string;
   notes: string | null;
   createdBy: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  createdAt: Date | null;
+  updatedAt: Date | null;
 }
 
 export const itemSchema = z.object({
