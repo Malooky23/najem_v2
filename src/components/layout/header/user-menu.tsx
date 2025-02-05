@@ -14,6 +14,8 @@ import {
 import { LogoutButton } from "../../auth/logout-button";
 import { Session } from "next-auth";
 import { customAvatar } from "./avatarGenerator";
+import styles from "./animation.module.css";
+
 
 interface UserMenuProps {
   session: Session | null;
@@ -42,17 +44,20 @@ export function UserMenu({ session }: UserMenuProps) {
                     </div>
                   )}
                 </div>
-                <Avatar>
+                
+                <Avatar className={styles.floating}>
+
                   <AvatarFallback className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center border border-gray-200">
                     {/* <User className="h-5 w-5 text-gray-600" />  */}
                     {/* THIS IS WHERE THE AVATAR WILL BE */}
                     {/* {customAvatar(session.user?.id || '')} */}
-                    <div
+                    <div 
                       className="w-full h-full"
                       dangerouslySetInnerHTML={{
                         __html: customAvatar(session.user?.id || "")(),
                       }}
                     />
+
                   </AvatarFallback>
                 </Avatar>
               </button>

@@ -21,6 +21,7 @@ def transform_customer(raw):
         "contacts": [
             {"contact_type": contact["type"], "contact_value": str(contact["value"])}
             for contact in raw.get("contacts", [])
+     
         ],
     }
 

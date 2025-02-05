@@ -2,6 +2,8 @@
 
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { GenerateItems } from "./itemseeder";
+import { adjectives, nouns, busType } from "./consts";
 
 // Define the shape of your raw JSON customer object.
 interface RawBusinessCustomer {
@@ -22,28 +24,8 @@ interface RawBusinessCustomer {
  * Generate a random business name by combining a random adjective and noun.
  */
 function generateRandomBusinessName(): string {
-  const adjectives = [
-    "Blue", "Happy", "Sunny", "Cold", "Bright", "Golden", "Dynamic", "Rapid",
-    "Green", "Creative", "Innovative", "Smart", "Agile", "Efficient", "Modern",
-    "Reliable", "Secure", "Global", "Local", "Advanced", "Future", "Digital",
-    "Virtual", "Cloud", "Sustainable", "Eco", "Fast", "Quick", "Simple", "Clear",
-    "Sharp", "Strong", "Bold", "Vivid", "Pure", "Fresh", "New", "Next", "Prime",
-    "Elite", "Ultimate", "Super", "Mega", "Hyper", "Ultra", "Alpha", "Omega",
-    "Epic", "Grand", "Royal", "Supreme", "Infinite", "Limitless", "Timeless"
-  ];  
-  const nouns = [
-    "Tech", "Solutions", "Systems", "Industries", "Enterprises", "Group", "Networks", "Dynamics",
-    "Works", "Lab", "Labs", "Studio", "Studios", "Agency", "Corp", "Inc", "Co", "Company",
-    "Ventures", "Partners", "Holdings", "World", "Global", "Local", "Nation", "Nations",
-    "Innovation", "Creation", "Design", "Development", "Engineering", "Consulting", "Services",
-    "Management", "Resources", "Capital", "Finance", "Bank", "Trust", "Media", "Marketing",
-    "Communications", "Data", "Analytics", "AI", "Cloud", "Software", "Hardware", "Devices",
-    "Robotics", "Automation", "Energy", "Power", "Health", "Care", "Life", "Bio", "Pharma",
-    "Education", "Academy", "Institute", "School", "University", "Research", "Science", "Art",
-    "Culture", "Travel", "Tourism", "Food", "Fitness", "Sports", "Gaming", "Entertainment"
-  ];
-  const busType = ["LLC", "INC", "GT", "AB", "LIMITED CORP", "CORP", "BIG BOYS"];
-  const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const randomAdjective =
+    adjectives[Math.floor(Math.random() * adjectives.length)];
   const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
   const randomBusType = busType[Math.floor(Math.random() * busType.length)];
   return `${randomAdjective} ${randomNoun} ${randomBusType}`;
@@ -68,13 +50,13 @@ function transformCustomer(raw: RawBusinessCustomer) {
       address1: raw.address.address_1,
       address2: raw.address.address_2,
       city: raw.address.city,
-      postalCode: raw.address.postal_code
+      postalCode: raw.address.postal_code,
     },
     contacts: raw.contacts.map((contact) => ({
       contact_type: contact.type,
       // Using 'contact_data' to match your API's expected key.
-      contact_data: String(contact.value)
-    }))
+      contact_data: String(contact.value),
+    })),
   };
 }
 
@@ -114,9 +96,9 @@ export default function SeedPage() {
             method: "POST",
             credentials: "include", // Ensure session cookies are sent
             headers: {
-              "Content-Type": "application/json"
+              "Content-Type": "application/json",
             },
-            body: JSON.stringify(customer)
+            body: JSON.stringify(customer),
           });
           const data = await resPost.json();
 
@@ -149,8 +131,25 @@ export default function SeedPage() {
     cancelledRef.current = true;
   };
 
+  const [generateToggle, setGenerateToggle] = useState(true);
+
+  // Updated async function to handle generating items.
+  const TestItems = async () => {
+    try {
+      await GenerateItems(generateToggle);
+      console.log("GenerateItems finished successfully.");
+      setGenerateToggle((prev) => !prev);
+    } catch (error) {
+      console.error("Error calling GenerateItems:", error);
+    }
+  };
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
+      <div className="flex flex-col items-center space-y-4">
+        <h1 className="text-2xl font-bold">Test Items Seeder</h1>
+        <Button onClick={TestItems}>CREATE NEW ITEM </Button>
+      </div>
       <h1 className="text-2xl font-bold">Seed Business Customers</h1>
       <div className="flex space-x-4">
         <Button onClick={handleSeed} disabled={loading}>
@@ -179,4 +178,4 @@ export default function SeedPage() {
       </div>
     </div>
   );
-} 
+}

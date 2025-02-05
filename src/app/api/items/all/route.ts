@@ -8,7 +8,7 @@ export const revalidate = 3600; // Revalidate every hour
 export async function GET() {
   try {
     // Get all items without pagination
-    const { items } = await getPaginatedItems(1, 1000, {
+    const { items } = await getPaginatedItems(1, 10000, {
       sortOrder: 'asc',
       sortBy: 'itemNumber'
     });
