@@ -11,9 +11,7 @@ export async function GET() {
         { status: 401 }
       );
     }
-
-
-
+    console.log("getCustomers API HIT =======")
     const customers = await getCustomers();
     return NextResponse.json(customers);
   } catch (error) {

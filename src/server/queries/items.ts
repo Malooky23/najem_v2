@@ -32,7 +32,8 @@ export async function getPaginatedItems(
       item: items,
       customer: {
         businessName: businessCustomers.businessName,
-        individualName: sql<string>`concat(${individualCustomers.firstName}, ' ', ${individualCustomers.lastName})`
+        individualFirstName: individualCustomers.firstName,
+        individualLastName: individualCustomers.lastName
       },
       stock: itemStock,
       movements: stockMovements,
@@ -51,7 +52,6 @@ export async function getPaginatedItems(
       eq(customers.customerId, individualCustomers.individualCustomerId)
     )
     .leftJoin(users, eq(items.createdBy, users.userId))
-    // .where(search ? sql`items.item_name ILIKE ${`%${search}%`}` : undefined)
     .where(search ? sql`
         items.item_name ILIKE ${`%${search}%`}
         AND items.item_name_tsvector @@ to_tsquery('english', ${search.split(' ').join(' & ')})
@@ -68,8 +68,8 @@ export async function getPaginatedItems(
   return {
     items: itemsData.map(result => ({
       ...result.item,
-      customerName: result.customer?.businessName || result.customer?.individualName,
-      stock: result.stock,
+      customerName: result.customer?.businessName || result.customer?.individualFirstName + " " + result.customer?.individualLastName,
+      stock: result.stock?.currentQuantity,
       movements: result.movements,
       createdBy: result.user?.firstName + " " + result.user?.lastName
     })),

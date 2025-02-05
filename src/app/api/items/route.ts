@@ -32,6 +32,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const validatedData = itemSchema.parse(body);
+    console.log("validatedData", validatedData);
     const newItem = await createItem(validatedData);
     return NextResponse.json(newItem, { status: 201 });
     

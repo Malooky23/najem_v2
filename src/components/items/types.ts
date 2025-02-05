@@ -21,16 +21,19 @@ export interface Item {
   createdBy: string;
   createdAt: Date | null;
   updatedAt: Date | null;
+  customerName: string;
+  stock?: number | null;
 }
 
 export const itemSchema = z.object({
+  // itemId: z.string().uuid("Invalid item ID"),
   itemName: z.string().min(1, "Required"),
-  itemType: z.string().optional(),
-  itemBrand: z.string().optional(),
-  itemModel: z.string().optional(),
-  itemBarcode: z.string().optional(),
-  itemCountryOfOrigin: z.string().optional(),
-  packingType: z.string(),
+  itemType: z.string().nullable().optional(),
+  itemBrand: z.string().nullable().optional(),
+  itemModel: z.string().nullable().optional(),
+  itemBarcode: z.string().nullable().optional(),
+  itemCountryOfOrigin: z.string().nullable().optional(),
+  packingType: z.string().nullable(),
   weightGrams: z.coerce.number().nonnegative().optional(),
   dimensions: z
     .object({
@@ -38,8 +41,9 @@ export const itemSchema = z.object({
       height: z.coerce.number().nonnegative().optional(),
       length: z.coerce.number().nonnegative().optional(),
     })
+    .nullable()
     .optional(),
-  notes: z.string().optional(),
+  notes: z.string().nullable().optional(),
 });
 
 export const createItemSchema = itemSchema.extend({

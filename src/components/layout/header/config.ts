@@ -19,6 +19,11 @@ export const navigationConfig: NavConfig = {
         label: "Items",
         icon: LucideIcons.PackageCheck,
       },
+      {
+        href: "/seed",
+        label: "Seeder",
+        icon: LucideIcons.Trees,
+      },
       // {
       //   href: "/inventory",
       //   label: "Inventory",

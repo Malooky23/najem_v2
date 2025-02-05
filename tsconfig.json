@@ -24,6 +24,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/app/(protected)/warehouse/orders/claude.js"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/app/(protected)/warehouse/orders/claude.js", "src/scripts/seed-customers.mjs"],
   "exclude": ["node_modules"]
 }

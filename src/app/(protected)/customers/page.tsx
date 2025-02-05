@@ -1,5 +1,4 @@
 // "use server";
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
 import { auth } from '@/lib/auth';
@@ -17,26 +16,17 @@ const CACHE_TAG = 'customers';
 const REVALIDATE_TIME = 3600; // 1 hour in seconds
 
 // Cached data fetcher
-const getCachedCustomers = cache(
-  async () => {
-    const customers = await getCustomers();
-    return customers;
-  },
-  ['get-customers'], 
-  {
-    tags: [CACHE_TAG],
-    revalidate: REVALIDATE_TIME
-  }
-);
-
-// function TableSkeleton() {
-//   return (
-//     <div className="space-y-4">
-//       <Skeleton className="h-8 w-full" />
-//       <Skeleton className="h-[400px] w-full" />
-//     </div>
-//   );
-// }
+// const getCachedCustomers = cache(
+//   async () => {
+//     const customers = await getCustomers();
+//     return customers;
+//   },
+//   ['get-customers'], 
+//   {
+//     tags: [CACHE_TAG],
+//     revalidate: REVALIDATE_TIME
+//   }
+// );
 
 
 
@@ -114,8 +104,11 @@ export default async function CustomersPage() {
   );
 }
 
+
 async function CustomersTableWrapper({ type }: { type?: 'INDIVIDUAL' | 'BUSINESS' }) {
-  const customers = await getCachedCustomers();
+  const customers = await getCustomers();
+  // console.log('Customers from getCachedCustomers() ', JSON.stringify(customers, null, 2));
+  console.log('Customers from getCachedCustomers() ', customers.length);
   const filteredCustomers = type ? 
     customers.filter(c => c.customerType === type) : 
     customers;
@@ -132,3 +125,5 @@ async function CustomersTableWrapper({ type }: { type?: 'INDIVIDUAL' | 'BUSINESS
 
 // Add page-level revalidation
 export const revalidate = 3600; 
+
+

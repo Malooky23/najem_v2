@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getPaginatedItems } from '@/server/queries/items';
 import type { Item } from '@/components/items/types';
 
-export const dynamic = 'force-dynamic';
+// export const dynamic = 'force-dynamic';
 export const revalidate = 3600; // Revalidate every hour
 
 export async function GET() {
@@ -12,6 +12,7 @@ export async function GET() {
       sortOrder: 'asc',
       sortBy: 'itemNumber'
     });
+    // console.log("items", items);
 
     // Transform to match your Item type
     const formattedItems: Item[] = items.map(item => ({
@@ -24,7 +25,8 @@ export async function GET() {
         height?: number;
       } | null,
       customerId: item.customerId || '',
-      createdBy: item.createdBy || ''
+      createdBy: item.createdBy || '',
+      customerName: item.customerName || ''
     }));
 
     return NextResponse.json(formattedItems);

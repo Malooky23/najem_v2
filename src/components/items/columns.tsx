@@ -1,6 +1,6 @@
 "use client";
 
-import { ColumnDef, Column } from "@tanstack/react-table";
+import {  Column } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { ArrowUpDown, Edit, Trash } from "lucide-react";
 import { Item } from "./types";
@@ -98,14 +98,16 @@ const createCell = (key: string, cellType: string = 'text', handlers?: {
 };
 
 const columnConfigs: ColumnConfig[] = [
-  { key: "itemNumber", header: "Item #", sortable: true },
+  { key: "itemNumber", header: "ID", sortable: true },
   { key: "itemName", header: "Name", sortable: true },
   { key: "packingType", header: "Type", cellType: 'type', sortable: true },
-  { key: "itemBrand", header: "Brand" },
-  { key: "itemModel", header: "Model" },
-  { key: "itemBarcode", header: "Barcode" },
+  { key: "stock", header: "Stock" },
+
+  // { key: "itemBrand", header: "Brand" },
+  // { key: "itemModel", header: "Model" },
+  // { key: "itemBarcode", header: "Barcode" },
   { key: "customerName", header: "Owner" },
-  { key: "itemCountryOfOrigin", header: "Origin" },
+  // { key: "itemCountryOfOrigin", header: "Origin" },
   // { key: "actions", header: "Actions", cellType: 'actions' },
 ];
 
@@ -114,6 +116,8 @@ export const getColumns = (handlers: {
   onDelete: (item: Item) => void 
 }) => columnConfigs.map(config => ({
   accessorKey: config.key,
+  enableResizing: true,
+  size:1000,
   header: ({ column }: { column: Column<Item, unknown> }) => 
     createHeader(config.header, column, config.sortable),
   cell: createCell(config.key, config.cellType, handlers)
