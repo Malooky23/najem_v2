@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -26,8 +26,8 @@ import { createItemSchema, CreateItemInput, itemTypes, Item } from "./types";
 import { useSession } from "next-auth/react";
 import { FormInputField } from "@/components/form/form-input-field";
 import { FormSelectField } from "@/components/form/form-select-field";
-import { EnrichedCustomer } from "@/lib/types/customer";
-import { z } from "zod";
+import type { EnrichedCustomer } from "@/lib/types/customer";
+import { getCustomers } from "@/server/queries/customers";
 
 const FORM_FIELDS = {
   basic: [
@@ -48,13 +48,16 @@ const FORM_FIELDS = {
   ],
 } as const;
 
-export function CreateItemDialog({ 
-  children,
-  onSuccess // Add success callback prop
-}: { 
+interface CreateItemDialogProps {
   children: React.ReactNode;
   onSuccess?: (item: Item) => void;
-}) {
+}
+
+export async function CreateItemDialog({ 
+  children,
+  onSuccess,
+  
+}: CreateItemDialogProps) {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
   const { data: session } = useSession();
@@ -72,34 +75,34 @@ export function CreateItemDialog({
     },
   });
 
-  const { data: customers } = useQuery({
-    queryKey: ["customers"],
-    queryFn: async () => {
-      const response = await fetch("/api/customers");
-      if (!response.ok) throw new Error("Failed to fetch customers");
-      return response.json();
-    },
-    initialData: () => queryClient.getQueryData(["customers"]),
-    staleTime: 60 * 60 * 1000, // 1 hour to match page revalidation
+  const customers = await getCustomers()
+
+  const customerOptions = customers.map((customer) => {
+    const label = customer.business 
+      ? customer.business.businessName 
+      : customer.individual 
+        ? `${customer.individual.firstName} ${customer.individual.lastName}` 
+        : "Unknown";
+    return { value: customer.customerId, label };
   });
 
   const createItem = useMutation({
     mutationFn: async (data: CreateItemInput) => {
-      console.log("Mutation called with data:", data);
       const cleanedData = {
         ...data,
-        dimensions: data.dimensions?.width && data.dimensions.height && data.dimensions.length
-          ? {
-              width: Number(data.dimensions.width),
-              height: Number(data.dimensions.height),
-              length: Number(data.dimensions.length),
-            }
-          : undefined,
+        dimensions:
+          data.dimensions?.width &&
+          data.dimensions.height &&
+          data.dimensions.length
+            ? {
+                width: Number(data.dimensions.width),
+                height: Number(data.dimensions.height),
+                length: Number(data.dimensions.length),
+              }
+            : undefined,
         weightGrams: data.weightGrams ? Number(data.weightGrams) : undefined,
         createdBy: session?.user?.id,
       };
-
-      console.log("Cleaned data:", cleanedData);
 
       const response = await fetch("/api/items", {
         method: "POST",
@@ -132,7 +135,6 @@ export function CreateItemDialog({
   });
 
   const onSubmit = async (data: CreateItemInput) => {
-    console.log("Form submitted with data:", data);
     try {
       await createItem.mutateAsync(data);
     } catch (error) {
@@ -140,13 +142,7 @@ export function CreateItemDialog({
     }
   };
 
-  // Add this to debug form validation
   const handleSubmit = form.handleSubmit(onSubmit);
-  console.log("Form state111111111:", {
-    isValid: form.formState.isValid,
-    errors: form.formState.errors,
-    values: form.getValues(),
-  });
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -168,7 +164,6 @@ export function CreateItemDialog({
               ))}
             </div>
 
-
             <FormSelectField
               form={form}
               name="packingType"
@@ -186,50 +181,8 @@ export function CreateItemDialog({
               name="customerId"
               label="Customer"
               required
-              options={
-                customers
-                  ?.slice() // Create a copy to avoid mutating original array
-                  .sort(
-                    (
-                      a: {
-                        business: { businessName: string };
-                        individual: { firstName: any; lastName: any };
-                      },
-                      b: {
-                        business: { businessName: string };
-                        individual: { firstName: any; lastName: any };
-                      }
-                    ) => {
-                      const aName =
-                        a.business?.businessName ||
-                        `${a.individual?.firstName} ${a.individual?.lastName}`;
-                      const bName =
-                        b.business?.businessName ||
-                        `${b.individual?.firstName} ${b.individual?.lastName}`;
-                      return aName.localeCompare(bName);
-                    }
-                  )
-                  .map(
-                    (customer: {
-                      customerId: any;
-                      business: { businessName: any };
-                      individual: { firstName: any; lastName: any };
-                    }) => ({
-                      value: customer.customerId,
-                      label:
-                        customer.business?.businessName ||
-                        `${customer.individual?.firstName} ${customer.individual?.lastName}`,
-                    })
-                  ) || []
-              }
-              placeholder="Select customer"
+              options={customerOptions}
             />
-
-            {customers?.length === 0 && (
-              <div className="text-sm text-muted-foreground">
-                No customers found. Please create customers first.
-              </div>
-            )}
 
             <div className="grid grid-cols-2 gap-4">
               {FORM_FIELDS.details.map((field) => (
