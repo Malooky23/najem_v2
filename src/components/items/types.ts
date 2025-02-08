@@ -21,6 +21,7 @@ export interface Item {
   createdBy: string;
   createdAt: Date | null;
   updatedAt: Date | null;
+  isDeleted: boolean | null;
   customerName: string;
   stock?: number | null;
 }

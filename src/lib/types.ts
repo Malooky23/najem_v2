@@ -65,3 +65,19 @@
 // createdAt: Date;
 // updatedBy: string;
 // updatedAt: Date;
+
+export enum UserType {
+
+    CUSTOMER = "CUSTOMER",
+    EMPLOYEE = "EMPLOYEE",
+    DEMO = "DEMO",
+
+
+}
+
+export const userTypes = [
+
+    { label: "Customer", value: UserType.CUSTOMER },
+    { label: "Employee", value: UserType.EMPLOYEE },
+    { label: "Demo", value: UserType.DEMO },
+];

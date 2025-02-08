@@ -1,6 +1,6 @@
 import { db } from '@/server/db';
 import { items, itemStock, stockMovements, businessCustomers, individualCustomers, customers, users } from '@/server/db/schema';
-import { eq, asc, desc, sql } from 'drizzle-orm';
+import { eq, asc, desc, sql, and, gt } from 'drizzle-orm';
 import { z } from 'zod';
 
 // Type for sorting parameters
@@ -8,6 +8,7 @@ export type SortParams = {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
   search?: string;
+  filter?: any; // Add filter type here - making it 'any' for simplicity, refine as needed
 };
 
 // Get paginated items with related data
@@ -16,16 +17,27 @@ export async function getPaginatedItems(
   limit: number = 50,
   sortParams: SortParams = {}
 ) {
-  const { sortBy = 'itemNumber', sortOrder = 'asc', search = '' } = sortParams;
+  const { sortBy = 'itemNumber', sortOrder = 'asc', search = '', filter = {} } = sortParams; // Destructure filter from sortParams
 
   // Validate sortable columns
   const validSortColumns = [
     'itemNumber', 'itemName', 'itemType', 'createdAt', 'updatedAt'
   ] as const;
 
-  const validSortBy = validSortColumns.includes(sortBy as any) 
+  const validSortBy = validSortColumns.includes(sortBy as any)
     ? sortBy as keyof typeof items.$inferSelect
     : 'itemNumber';
+
+  // Construct the WHERE clause with search and filter conditions
+  const whereConditions = and(
+    eq(items.isDeleted, false), // Always filter for not deleted items
+    search
+      ? sql`items.item_name ILIKE ${`%${search}%`}`
+      : undefined, // Conditionally add search condition
+    filter.updatedAt ? gt(items.updatedAt, filter.updatedAt.gt) : undefined // Conditionally add updatedAt filter
+  );
+
+  console.log('filter.updatedAt',filter.updatedAt)
 
   const query = db
     .select({
@@ -41,28 +53,25 @@ export async function getPaginatedItems(
     })
     .from(items)
     .leftJoin(itemStock, eq(items.itemId, itemStock.itemId))
-    .leftJoin(stockMovements, eq(items.itemId, stockMovements.itemId))
+    .leftJoin(stockMovements, eq(items.itemId, itemStock.itemId))
     .leftJoin(customers, eq(items.customerId, customers.customerId))
     .leftJoin(
-      businessCustomers, 
+      businessCustomers,
       eq(customers.customerId, businessCustomers.businessCustomerId)
     )
     .leftJoin(
-      individualCustomers, 
+      individualCustomers,
       eq(customers.customerId, individualCustomers.individualCustomerId)
     )
     .leftJoin(users, eq(items.createdBy, users.userId))
-    .where(search ? sql`
-        items.item_name ILIKE ${`%${search}%`}
-        AND items.item_name_tsvector @@ to_tsquery('english', ${search.split(' ').join(' & ')})
-      ` : undefined)
+    .where(whereConditions) // Apply the combined WHERE clause
     .orderBy(sortOrder === 'asc' ? asc(items[validSortBy]) : desc(items[validSortBy]))
     .limit(limit)
     .offset((page - 1) * limit);
 
   const [itemsData, total] = await Promise.all([
     query,
-    db.select({ count: sql<number>`count(*)` }).from(items)
+    db.select({ count: sql<number>`count(*)` }).from(items).where(whereConditions) // Apply the same WHERE clause to count query
   ]);
 
   return {

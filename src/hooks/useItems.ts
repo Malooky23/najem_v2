@@ -1,29 +1,25 @@
-import { useQuery } from '@tanstack/react-query'
-import type { Item } from '@/components/items/types'
+import { useQuery } from '@tanstack/react-query';
+import type { Item } from '@/components/items/types';
+import { fetchItems } from "@/lib/api";
 
-async function fetchItems(): Promise<Item[]> {
-  
-  const response = await fetch('/api/items/all')
-  if (!response.ok) {
-    throw new Error('Error fetching items')
-  }
-  return response.json()
+interface ItemsResponse {
+  items: Item[];
+  total: number;
+  totalPages: number;
+  page: number;
 }
 
-export function useItems() {
-  const { data, error, isLoading, refetch } = useQuery({
-    queryKey: ['items'],
-    queryFn: fetchItems,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    initialData: [] as Item[], // Ensures data is always an array of Item
-    refetchOnMount: 'always', // Force a refetch on mount
-
-  })
-
-  return {
-    allItems: data || [],
-    isLoading,
-    error,
-    refetch,
-  }
+export function useItems(page: number, limit: number) {
+  return useQuery<ItemsResponse>({
+    queryKey: useItems.getQueryKey(page, limit),
+    queryFn: () => fetchItems(page, limit),
+    staleTime: 120000,
+    gcTime: 300000, // replaced cacheTime with gcTime in v5
+    placeholderData: (prev) => prev,
+    refetchOnWindowFocus: false,
+  });
 }
+
+// Add static method to get queryKey
+useItems.getQueryKey = (page: number, limit: number) => ["items", page, limit];
+

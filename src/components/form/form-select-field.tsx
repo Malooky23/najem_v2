@@ -20,7 +20,7 @@ interface Option {
 }
 
 interface FormSelectFieldProps {
-  form: UseFormReturn<any>;
+  control: any;
   name: string;
   label: string;
   options: Option[];
@@ -30,7 +30,7 @@ interface FormSelectFieldProps {
 }
 
 export function FormSelectField({
-  form,
+  control,
   name,
   label,
   options,
@@ -40,7 +40,7 @@ export function FormSelectField({
 }: FormSelectFieldProps) {
   return (
     <FormField
-      control={form.control}
+      control={control}
       name={name}
       render={({ field }) => (
         <FormItem>

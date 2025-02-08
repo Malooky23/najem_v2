@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -26,8 +26,7 @@ import { createItemSchema, CreateItemInput, itemTypes, Item } from "./types";
 import { useSession } from "next-auth/react";
 import { FormInputField } from "@/components/form/form-input-field";
 import { FormSelectField } from "@/components/form/form-select-field";
-import type { EnrichedCustomer } from "@/lib/types/customer";
-import { getCustomers } from "@/server/queries/customers";
+import { VirtualizedSelect, Option } from "@/components/form/VirtualizedSelect";
 
 const FORM_FIELDS = {
   basic: [
@@ -48,16 +47,13 @@ const FORM_FIELDS = {
   ],
 } as const;
 
-interface CreateItemDialogProps {
+export function CreateItemDialog({ 
+  children,
+  onSuccess // Optional callback after a successful create
+}: { 
   children: React.ReactNode;
   onSuccess?: (item: Item) => void;
-}
-
-export async function CreateItemDialog({ 
-  children,
-  onSuccess,
-  
-}: CreateItemDialogProps) {
+}) {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
   const { data: session } = useSession();
@@ -75,15 +71,15 @@ export async function CreateItemDialog({
     },
   });
 
-  const customers = await getCustomers()
-
-  const customerOptions = customers.map((customer) => {
-    const label = customer.business 
-      ? customer.business.businessName 
-      : customer.individual 
-        ? `${customer.individual.firstName} ${customer.individual.lastName}` 
-        : "Unknown";
-    return { value: customer.customerId, label };
+  // Use React Query to fetch customers from your newly created API route.
+  const { data: customersData, isLoading: customersLoading } = useQuery({
+    queryKey: ["customers"],
+    queryFn: async () => {
+      const res = await fetch("/api/customers");
+      if (!res.ok) throw new Error("Failed to fetch customers");
+      return res.json();
+    },
+    staleTime: 60 * 60 * 1000, // 1 hour
   });
 
   const createItem = useMutation({
@@ -144,6 +140,17 @@ export async function CreateItemDialog({
 
   const handleSubmit = form.handleSubmit(onSubmit);
 
+  const customerOptions: Option[] = customersData
+    ? customersData.map((customer: any) => ({
+        value: customer.customerId,
+        label: customer.business
+          ? customer.business.businessName
+          : customer.individual
+          ? `${customer.individual.firstName} ${customer.individual.lastName}`
+          : "Unknown",
+      }))
+    : [];
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
@@ -165,7 +172,8 @@ export async function CreateItemDialog({
             </div>
 
             <FormSelectField
-              form={form}
+              control={form.control}
+
               name="packingType"
               label="Packing Type"
               required
@@ -176,13 +184,18 @@ export async function CreateItemDialog({
               placeholder="Select item type"
             />
 
-            <FormSelectField
-              form={form}
-              name="customerId"
-              label="Customer"
-              required
+            <VirtualizedSelect
               options={customerOptions}
+              value={form.getValues("customerId")}
+              onChange={(val) => form.setValue("customerId", val)}
+              height={250}
             />
+
+            {customersLoading && (
+              <div className="text-sm text-muted-foreground">
+                Loading customers...
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               {FORM_FIELDS.details.map((field) => (

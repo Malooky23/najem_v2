@@ -78,6 +78,7 @@ export default function SeedPage() {
     setSuccessNames([]);
     setFailedNames([]);
     cancelledRef.current = false;
+    let loopCount = 0; // Initialize loop counter
 
     try {
       // Fetch the JSON file from the public folder
@@ -87,6 +88,7 @@ export default function SeedPage() {
       // Iterate over each raw customer record
       for (const rawCustomer of rawCustomers) {
         if (cancelledRef.current) break;
+        if (loopCount >= 1000) break; // Stop after 10 loops
 
         const customer = transformCustomer(rawCustomer);
 
@@ -113,12 +115,13 @@ export default function SeedPage() {
           setFailCount((prev) => prev + 1);
           setFailedNames((prev) => [...prev, customer.businessName]);
         }
+        loopCount++; // Increment loop counter
       }
 
       if (cancelledRef.current) {
         setMessage("Seeding cancelled by user.");
       } else {
-        setMessage("Seeding complete.");
+        setMessage("Seeding complete (10 loops)."); // Updated message
       }
     } catch (error: any) {
       setMessage("Error: " + error.message);

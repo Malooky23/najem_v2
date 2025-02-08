@@ -17,6 +17,9 @@ export default async function LoginPage() {
           <p className="text-gray-600 mt-2">Sign in to your account</p>
         </div>
         <LoginForm />
+        <div className="text-center text-sm text-gray-600 mt-4">
+         Don't have an account? <a href="/signup" className="text-primary hover:underline">Sign up</a>
+        </div>
       </div>
     </main>
   );

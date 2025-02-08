@@ -1,18 +1,12 @@
 "use client";
 
-import {  Column } from "@tanstack/react-table";
+import { Column } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { ArrowUpDown, Edit, Trash } from "lucide-react";
 import { Item } from "./types";
 import { cn } from "@/lib/utils";
 import { TextCell, TypeCell, ActionsCell } from "./table-cells";
-
-type ColumnConfig = {
-  key: string;
-  header: string;
-  sortable?: boolean;
-  cellType?: 'text' | 'type' | 'owner' | 'actions';
-};
+import { columnConfigs } from "./columns-config";
 
 const SortButton = ({ title, column }: { title: string; column: any }) => {
   return (
@@ -29,25 +23,31 @@ const SortButton = ({ title, column }: { title: string; column: any }) => {
 SortButton.displayName = "SortButton";
 
 const createHeader = (
-  title: string, 
-  column: Column<Item, unknown>, 
+  title: string,
+  column: Column<Item, unknown>,
   sortable: boolean = false
 ) => {
   if (!sortable) return title;
   return <SortButton title={title} column={column} />;
 };
 
-const ItemCell = ({ row, columnKey, cellType, onEdit, onDelete }: { 
-  row: any, 
-  columnKey: string, 
-  cellType: string,
-  onEdit: (item: Item) => void,
-  onDelete: (item: Item) => void
+const ItemCell = ({
+  row,
+  columnKey,
+  cellType,
+  onEdit,
+  onDelete,
+}: {
+  row: any;
+  columnKey: string;
+  cellType: string;
+  onEdit: (item: Item) => void;
+  onDelete: (item: Item) => void;
 }) => {
   switch (cellType) {
-    case 'type':
+    case "type":
       return <TypeCell type={row.getValue(columnKey)} />;
-    case 'actions':
+    case "actions":
       return (
         <div className="flex gap-1">
           <Button
@@ -80,14 +80,18 @@ const ItemCell = ({ row, columnKey, cellType, onEdit, onDelete }: {
 };
 ItemCell.displayName = "ItemCell";
 
-const createCell = (key: string, cellType: string = 'text', handlers?: { 
-  onEdit: (item: Item) => void,
-  onDelete: (item: Item) => void 
-}) => {
+const createCell = (
+  key: string,
+  cellType: string = "text",
+  handlers?: {
+    onEdit: (item: Item) => void;
+    onDelete: (item: Item) => void;
+  }
+) => {
   const CellRenderer = ({ row }: any) => (
-    <ItemCell 
-      row={row} 
-      columnKey={key} 
+    <ItemCell
+      row={row}
+      columnKey={key}
       cellType={cellType}
       onEdit={handlers?.onEdit || (() => {})}
       onDelete={handlers?.onDelete || (() => {})}
@@ -97,28 +101,59 @@ const createCell = (key: string, cellType: string = 'text', handlers?: {
   return CellRenderer;
 };
 
-const columnConfigs: ColumnConfig[] = [
-  { key: "itemNumber", header: "ID", sortable: true },
-  { key: "itemName", header: "Name", sortable: true },
-  { key: "packingType", header: "Type", cellType: 'type', sortable: true },
-  { key: "stock", header: "Stock" },
 
-  // { key: "itemBrand", header: "Brand" },
-  // { key: "itemModel", header: "Model" },
-  // { key: "itemBarcode", header: "Barcode" },
-  { key: "customerName", header: "Owner" },
-  // { key: "itemCountryOfOrigin", header: "Origin" },
-  // { key: "actions", header: "Actions", cellType: 'actions' },
-];
 
-export const getColumns = (handlers: { 
-  onEdit: (item: Item) => void,
-  onDelete: (item: Item) => void 
-}) => columnConfigs.map(config => ({
-  accessorKey: config.key,
-  enableResizing: true,
-  size:1000,
-  header: ({ column }: { column: Column<Item, unknown> }) => 
-    createHeader(config.header, column, config.sortable),
-  cell: createCell(config.key, config.cellType, handlers)
-})); 
+export const getColumns = (handlers: {
+  onEdit: (item: Item) => void;
+  onDelete: (item: Item) => void;
+}) =>
+  columnConfigs.map((config) => ({
+    accessorKey: config.key,
+    enableResizing: true,
+    size: config.width,
+    header: ({ column }: { column: Column<Item, unknown> }) => (
+      <div
+        className={cn(
+          config.key === "itemType" && "text-center", // Center align for itemType
+          // "w-full"
+        )}
+      >
+        {createHeader(config.header, column, config.sortable)}
+      </div>
+    ),
+    cell: ({ row }: any) => (
+      <div
+        className={cn(
+          // "w-full",
+          config.key === "itemType" && "text-center", // Center align for itemType
+          config.grow && "flex-grow"
+        )}
+      >
+        {config.cellType ? (
+          <ItemCell
+            row={row}
+            columnKey={config.key}
+            cellType={config.cellType}
+            onEdit={handlers.onEdit}
+            onDelete={handlers.onDelete}
+          />
+        ) : (
+          <TextCell value={row.getValue(config.key)} />
+        )}
+      </div>
+    ),
+  }));
+
+
+  // export const getColumns = (handlers: {
+  //   onEdit: (item: Item) => void;
+  //   onDelete: (item: Item) => void;
+  // }) =>
+  //   columnConfigs.map((config) => ({
+  //     accessorKey: config.key,
+  //     enableResizing: true,
+  //     size: config.width, // Use the fixed width from the config
+  //     header: ({ column }: { column: Column<Item, unknown> }) =>
+  //       createHeader(config.header, column, config.sortable),
+  //     cell: createCell(config.key, config.cellType, handlers),
+  //   })); 

@@ -56,12 +56,12 @@ export const navigationConfig: NavConfig = {
   },
   CUSTOMER: [
     {
-      href: "/orders",
+      href: "/warehouse/orders",
       label: "My Orders",
       icon: LucideIcons.Package,
     },
     {
-      href: "/items",
+      href: "/warehouse/items",
       label: "My Items",
       icon: LucideIcons.PackageSearch,
     },

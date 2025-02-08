@@ -11,7 +11,7 @@ export function Sidebar() {
   return (
     <aside 
       className={cn(
-        "border-r bg-background transition-all duration-300",
+        "border-r bg-background transition-all duration-300 hidden",
         isCollapsed ? "w-16" : "w-64"
       )}
     >

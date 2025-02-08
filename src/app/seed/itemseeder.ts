@@ -4,16 +4,20 @@ import { z } from "zod";
 import { brands, itemsList, itemType } from "./consts";
 import { COUNTRIES } from "@/constants/countries";
 import { items } from "@/server/db/schema";
+import { auth } from "@/lib/auth";
 
 export async function GenerateItems(concurrent: boolean) {
   const customerIds = await db.query.customers.findMany({
     columns: { customerId: true },
   });
 
+  const session = await auth();
+  const user_id = session?.user.id || '0'
+
   console.log("Starting GenerateItems");
 
   if (true) {
-    const insertPromises = Array.from({ length: 100 }, (_, i) => {
+    const insertPromises = Array.from({ length: 1 }, (_, i) => {
       const ranType = itemType[Math.floor(Math.random() * itemType.length)];
       console.log("Inserting item", i);
       const randomItem = {
@@ -33,7 +37,7 @@ export async function GenerateItems(concurrent: boolean) {
         notes: "this is a purely random note for sure",
         customerId: customerIds[Math.floor(Math.random() * customerIds.length)]
           .customerId.toString(),
-        createdBy: "3b8ef4fa-0003-43aa-b8ce-2e2e27653aea",
+        createdBy: user_id,
       };
 
       return db

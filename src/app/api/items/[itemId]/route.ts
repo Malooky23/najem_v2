@@ -65,19 +65,27 @@ export async function PUT(
 // DELETE /api/items/:id - Delete item
 export async function DELETE(
   request: Request,
-  { params }: { params: { itemId: string } }
+  { params }: { params: Promise<{ itemId: string }> }
 ) {
   // Add await for params access
-  const { itemId } = params;
-  
+
+  const resolvedParams = await params;
+  const { itemId } = resolvedParams;
+
   try {
-    await db
-      .delete(items)
+    const updatedItem =await db
+      .update(items)
+      .set({ isDeleted: true })
       .where(eq(items.itemId, itemId));
 
-    return NextResponse.json({ success: true });
-    
+    if (!updatedItem) {
+      return NextResponse.json({ error: 'Item not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, message: 'Item moved to trash' });
+
   } catch (error) {
+    console.error("Soft delete error:", error);
     return NextResponse.json(
       { error: 'Failed to delete item' },
       { status: 500 }
